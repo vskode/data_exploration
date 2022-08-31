@@ -1,7 +1,10 @@
 # PATHS:
 # define paths for your data
-raw_data_path : "data/examples"
+raw_data_path : "data/raw_files"
 pickled_data_path : "data/pickles"
+
+# length of files in s
+length_of_file: 342
 
 # PLOTTING:
 # heading for main interactive plot

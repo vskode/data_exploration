@@ -110,7 +110,8 @@ def main():
 			for embedding in postprocessed_batch:
 				embeddingsList.append(embedding)
 
-			with open(destination.joinpath(wav.stem + '.pickle'), 'wb') as handle:
+			with open(destination.joinpath(wav.stem + wav.suffix + '.pickle'), 
+											'wb') as handle:
 				pickle.dump(embeddingsList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':

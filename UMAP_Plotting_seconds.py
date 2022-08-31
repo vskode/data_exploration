@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import librosa as lb
 import sounddevice as sd
+from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
@@ -90,7 +91,7 @@ def plot_wo_specs(data, timeLabels, title, centroids, classes):
     fig.write_html('Interactive_Plot.html')
     
 def create_timeList(lengths, files):
-    lin_array = np.linspace(0, 599, lengths[0])
+    lin_array = np.linspace(0, config['length_of_file'], lengths[0])
     files_array = []
     divisions_array = []
     for i in range(len(lengths)):
@@ -153,7 +154,7 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, title,
                 	dash.html.Button(id="button1", children="Play Sound", 
                                   n_clicks = 0),
                     dash.dcc.Graph(	id="table_container", figure = px.imshow(
-                        dummy_image(), height = 700)),
+                        dummy_image(), height = 900)),
             ], style={'width': '25%', 'display': 'inline-block',
                       'vertical-align': 'top'})
         ]
@@ -174,7 +175,7 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, title,
             file_path = clickData['points'][0]['customdata'][1]
             
             audio, sr, file_stem = load_audio(time_in_file, file_path)
-            spec = create_specs(audio, file_stem, file_path)
+            spec = create_specs(audio, file_path)
             
         if "button1" == dash.ctx.triggered_id:
             print('test')
@@ -190,33 +191,36 @@ def play_audio(audio, sr):
     sd.play(audio, sr)
     
 def load_audio(t, file):
-    file_stem = file.split('data')[-1].split('.pickle')[0][1:]
-    main_path = config['raw_data_path']
+    file_stem = Path(file).stem
+    main_path = Path(config['raw_data_path'])
 
-    minu = int(t.split(':')[0])
-    sec = int(t.split(':')[1].split('.')[0])/60
-    ttt = minu+sec
-    audio, sr = lb.load(main_path + file_stem, sr=16000, offset=ttt, 
-                        duration = 1)
+    minu = int(t.split(':')[0])*60
+    sec = int(t.split(':')[1].split('.')[0])
+    ms = int(t.split('.')[-1][:-1])/10
+    ttt = minu+sec+ms
+    audio, sr = lb.load(main_path.joinpath(file_stem), sr=16000, offset=ttt, 
+                        duration = 0.96)
     return audio, sr, file_stem
  
-def create_specs(audio, file_stem, t):
+def create_specs(audio, t):
  
-	S = np.abs(lb.stft(audio, win_length = 128))
-    
-	S_dB = lb.amplitude_to_db(S, ref=np.max)
- 
-	fig = px.imshow(S_dB, origin='lower', 
-			labels = {'x' : 'time in ms', 'y' : 'frequency in Hz'},
-      		height = 700)
-	return fig
+    S = np.abs(lb.stft(audio, win_length = 512))
+
+    S_dB = lb.amplitude_to_db(S, ref=np.max)
+
+    fig = px.imshow(S_dB, origin='lower', 
+                    aspect = 'auto',
+                    y = np.linspace(50, 8000, S.shape[0]),
+                    x = np.linspace(0, 0.96, S.shape[1]),
+                    labels = {'x' : 'time in s', 
+                            'y' : 'frequency in Hz'},
+                    height = 900)
+    return fig
 
 
 def get_embeddings():
     folders = glob.glob(config['pickled_data_path'])
-    df_all = pd.DataFrame()
-    file_list= []
-    lenghts = []
+    acc_embeddings, file_list, lenghts = [], [], []
     
     for folder in folders:
         files = glob.glob(folder + '/*.pickle')
@@ -224,25 +228,24 @@ def get_embeddings():
         
         for file in files:
             
-            with open(file, 'rb') as savef:
-                audioEmbeddings = pickle.load(savef)
-                audioEmbeddingsList = [arr.tolist() for arr in audioEmbeddings]
-                df = pd.DataFrame({'embeddings':audioEmbeddingsList})
-                df_all = df_all.append(df, ignore_index = True)
-                lenghts.append(len(df))
+            with open(file, 'rb') as loadf:
+                audioEmbeddings = pickle.load(loadf)
+                acc_embeddings = [*acc_embeddings, *audioEmbeddings]
+                lenghts.append(len(audioEmbeddings))
                 file_list.append(file)
     
-    return df_all, folders, file_list, lenghts
+    return acc_embeddings, folders, file_list, lenghts
 
 if __name__ == "__main__":
 
-    df_all, folders, file_list, lenghts = get_embeddings()
+    acc_embeddings, folders, file_list, lenghts = get_embeddings()
     percentiles = 24
-    plotUMAP_Continuous_plotly(df_all['embeddings'].tolist(), 
+    plotUMAP_Continuous_plotly(acc_embeddings, 
                             percentiles, config['title'], 
                             'plasma', file_list, lenghts)
 
     sys.exit()
 
-# download checkpoint: 
+# download checkpoint either mine or googles: 
 # https://drive.google.com/file/d/1k1UpQFKSMkmdjYlm1GphjP-nW1uMHEiU/view?usp=sharing
+# https://storage.googleapis.com/audioset/vggish_model.ckpt
