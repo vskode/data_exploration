@@ -1,5 +1,5 @@
-from interbed.embed2d import get_embeddings
-from interbed.plot import plotUMAP_Continuous_plotly
+from interbed.utils.embed2d import get_embeddings
+from interbed.utils.plot import plotUMAP_Continuous_plotly
 
 acc_embeddings, folders, file_list, lenghts = get_embeddings()
 percentiles = 24

@@ -1,3 +1,3 @@
-from interbed.embed import main
+from interbed.utils.embed import main
 
 main()
