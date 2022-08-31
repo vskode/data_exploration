@@ -1,4 +1,5 @@
 __pycache__/*
+utils/__pycache__*
 vggish_model.ckpt
 data/*
 test*
