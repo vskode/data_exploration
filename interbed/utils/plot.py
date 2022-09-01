@@ -67,8 +67,10 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
             dash.html.Div([
                     dash.html.H2(children='Spectrogram'),
                     dash.html.Div(id='graph_heading', children='file: ...'),
-                	dash.html.Button(id="button1", children="Play Sound", 
+                	dash.html.Button(id="play_audio_btn", children="Play Sound", 
                                   n_clicks = 0),
+                    dash.dcc.RadioItems(['Autoplay on', 'Autoplay off'], 
+                                    'Autoplay off', id='radio_autoplay'),
                     dash.dcc.Graph(id="table_container", 
                                    figure = px.imshow(dummy_image(), 
                                                       height = 900)
@@ -82,9 +84,10 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
         Output("table_container", "figure"),
         Output("graph_heading", "children"),
         Input("bar_chart", "clickData"),
-        Input("button1", "n_clicks"))
+        Input("play_audio_btn", "n_clicks"),
+        Input("radio_autoplay", "value"))
     
-    def fig_click(clickData, *_):
+    def fig_click(clickData, play_btn, autoplay_rad):
         if not clickData:
             return px.imshow(dummy_image(), height = 900), "file: ..."
         
@@ -94,9 +97,10 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
             
             audio, sr, file_stem = load_audio(time_in_file, file_path)
             spec = create_specs(audio, file_path)
+            if autoplay_rad == "Autoplay on":
+                play_audio(audio, sr)
             
-        if "button1" == dash.ctx.triggered_id:
-            print('test')
+        if "play_audio_btn" == dash.ctx.triggered_id:
             play_audio(audio, sr)
             
         title = f"file: {file_stem} at {time_in_file}"
