@@ -4,7 +4,7 @@ raw_data_path : "interbed/files/raw"
 pickled_data_path : "interbed/files/embeds"
 
 # length of files in s
-length_of_file: 342
+length_of_file: 729.6
 
 # PLOTTING:
 # heading for main interactive plot

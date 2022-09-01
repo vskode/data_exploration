@@ -115,7 +115,7 @@ def play_audio(audio, sr):
 def time_string_to_float(t):
     minu = int(t.split(':')[0])*60
     sec = int(t.split(':')[1].split('.')[0])
-    ms = int(t.split('.')[-1][:-1])/10
+    ms = int(t.split('.')[-1][:-1])/100
     return minu+sec+ms
     
 def load_audio(t_s, file):

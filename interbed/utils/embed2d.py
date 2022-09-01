@@ -66,14 +66,15 @@ def calculateCentroids_Classes(l):
 	return centroid
     
 def create_timeList(lengths, files):
-    lin_array = np.linspace(0, config['length_of_file'], lengths[0])
+    # lin_array = np.linspace(0, config['length_of_file'], lengths[0])
+    lin_array = np.arange(0, lengths[0], 0.96)
     files_array = []
     divisions_array = []
     for i in range(len(lengths)):
         for j in range(lengths[i]):
             files_array.append(files[i])
             divisions_array.append(
-                f'{int(lin_array[j]/60)}:{np.mod(lin_array[j], 60):.1f}s')
+                f'{int(lin_array[j]/60)}:{np.mod(lin_array[j], 60):.2f}s')
     return divisions_array, files_array
     
 def compute_embeddings(audioEmbeddingsList, percentiles):
