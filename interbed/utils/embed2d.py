@@ -67,7 +67,7 @@ def calculateCentroids_Classes(l):
     
 def create_timeList(lengths, files):
     # lin_array = np.linspace(0, config['length_of_file'], lengths[0])
-    lin_array = np.arange(0, lengths[0], 0.96)
+    lin_array = np.arange(0, max(lengths), 0.96)
     files_array = []
     divisions_array = []
     for i in range(len(lengths)):

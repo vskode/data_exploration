@@ -10,7 +10,7 @@ import soundfile as sf
     
 # model = hub.load('google_humpback_model')
 annotation_files = glob.glob('/home/vincent/Code/MA/Daten/Catherine_annotations/**/*.txt', 
-                               recursive=True)
+                               recursive=True)[19:]
 
 #%%
 def get_corresponding_sound_file(file):
@@ -20,7 +20,7 @@ def get_corresponding_sound_file(file):
                       recursive = True)
     
     if not file_path:
-        new_file = file.stem.split("Table")[0] + 'wav'
+        new_file = Path(file).stem.split("Table")[0] + 'wav'
         file_tolsta = '336097327.'+new_file[6:].replace('_000', '').replace('_', '')
         file_path = glob.glob(f'{hard_drive_path}/**/{file_tolsta}',
                     recursive = True)
@@ -34,17 +34,18 @@ def get_corresponding_sound_file(file):
     return file_path[0]
     
 def standardize_annotations(file):
-    ann = pd.read_csv(file, sep = r'\t')
+    ann = pd.read_csv(file, sep = '\t')
 
     ann['filename'] = get_corresponding_sound_file(file)
     ann['label']    = 1
     ann = ann.rename(columns = { 'Begin Time (s)' : 'start', 'End Time (s)' : 'end' })
+    ann = ann.sort_values('start')
     return ann
 
 def get_location(file):
     return Path(file).parent.stem
 
-def extract_segments(file):
+def extract_segments(file, meta_df):
     
     annots = standardize_annotations(file)
     
@@ -62,18 +63,20 @@ def extract_segments(file):
     for ind, row in annots.iterrows():
         
         for segment in range( num_of_segs_per_call[ind] ):
-            beg = int( ( row.start + 0.96*segment ) * 16000 )
+            beg = int( ( row.start + 0.96 *
+                        segment - annots.start.values[0]) * 16000)
             end = int( beg + 0.96*16000 )
             if end > len(audio):
                 continue
             call_array[cum] = audio[ beg:end ] 
             cum += 1
             
+    df = save_metadata(file, df, annots)
     
     flat_call_array = call_array[:cum].flatten()
-    return flat_call_array
-    # sf.write('interbed/files/raw/' + Path(file).stem + f'_{location}_condensed.wav', 
-    #          flat_call_array, samplerate = 16000)
+    sf.write('interbed/files/raw/' + Path(file).stem + f'_{location}_condensed.wav', 
+             flat_call_array, samplerate = 16000)
+    return df
     
     
 def save_ket_annot_only_existing_paths(df):
@@ -81,12 +84,15 @@ def save_ket_annot_only_existing_paths(df):
     df[list( map(check_if_full_path_func, 
         df.index.get_level_values(0)) )].to_csv(
         'Daten/ket_annot_file_exists.csv')
+        
+def save_metadata(file, df, annots):
+    annots.start
+    
 
 if __name__ == '__main__':
-    df = pd.DataFrame()
+    
+    meta_df = pd.DataFrame()
     for file in list(annotation_files):
-        
-        extract_segments(file)
-        
-    df.to_csv('ket_annot.csv')
-    save_ket_annot_only_existing_paths(df)
+        print('now compressing file: ', Path(file).stem)
+        meta_df = extract_segments(file, meta_df)
+    
