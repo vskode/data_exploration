@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 import pandas as pd
 import librosa as lb
+import datetime as dt
 from . import embed2d
 import sounddevice as sd
 from pathlib import Path
@@ -33,22 +34,8 @@ def dummy_image():
                 [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
                 ], dtype=np.uint8)
     
-def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
-                               colormap, files, lengths, 
-                               title = config['title'] ):
-
-    embeddings, cen, timeLabels, classes = embed2d.compute_embeddings(audioEmbeddingsList,
-                                                           percentiles)
-
-    divisions_array, files_array = embed2d.create_timeList(lengths, files)
-    
-    data = pd.DataFrame({'x' : embeddings[:,0], 
-                         'y':embeddings[:,1],
-                        'time_within_file' : divisions_array,
-                        'filename' : files_array})
-
-    app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
-    app.layout = dash.html.Div(
+def build_dash_layout(data, title, timeLabels):
+    return dash.html.Div(
         [
             dash.html.Div([
                 dash.html.H1(children=title),
@@ -56,7 +43,11 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', color=timeLabels,
                                         opacity = 0.4,
-                                        hover_data = ['time_within_file', 
+                                        hover_data = ['file date',
+                                                      'file time'
+                                                      'location',
+                                                      'time within original file', 
+                                                      'time within condensed file', 
                                                       'filename'],
                                         height = 900
                                         ),
@@ -78,7 +69,30 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
             ], style={'width': '25%', 'display': 'inline-block',
                       'vertical-align': 'top'})
         ]
-    )
+    )    
+
+def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
+                               colormap, files, lengths, 
+                               title = config['title'] ):
+
+    tup = embed2d.compute_embeddings(audioEmbeddingsList, percentiles)
+    embeddings, cen, timeLabels, classes = tup
+
+    divisions_array, files_array = embed2d.create_timeList(lengths, files)
+    
+    meta_df = pd.read_csv(config['raw_data_path'] + '/meta_data.csv')
+    
+    data = pd.DataFrame({'x' : embeddings[:,0], 
+                         'y': embeddings[:,1],
+                        'location': meta_df['site'],
+                'file date': meta_df['file_datetime'][0].split(' ')[0],
+                'file time': meta_df['file_datetime'][0].split(' ')[1],
+                        'time within original File' : meta_df['call_time'],
+                        'time within condensed File' : divisions_array,
+                        'filename' : files_array})
+
+    app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
+    app.layout = build_dash_layout(data, title, meta_df['file_datetime'])
 
     @app.callback(
         Output("table_container", "figure"),
