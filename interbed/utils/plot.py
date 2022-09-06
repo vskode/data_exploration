@@ -3,7 +3,6 @@ import yaml
 import numpy as np
 import pandas as pd
 import librosa as lb
-import datetime as dt
 from . import embed2d
 import sounddevice as sd
 from pathlib import Path
@@ -34,21 +33,29 @@ def dummy_image():
                 [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
                 ], dtype=np.uint8)
     
-def build_dash_layout(data, title, timeLabels):
+def build_dash_layout(data, title, timeLabels, location=None):
+    symbols = ['square', 'circle-dot', 'circle', 'circle-open']
+    hoverdata = {
+                'file date': False,
+                'file time': True,
+                'location': True,
+                'time within original file': True, 
+                'time within condensed file': True, 
+                'filename': True}
+    
     return dash.html.Div(
         [
             dash.html.Div([
                 dash.html.H1(children=title),
                 dash.dcc.Graph(
                     id="bar_chart",
-                    figure = px.scatter(data, x='x', y='y', color=timeLabels,
+                    figure = px.scatter(data, x='x', y='y', 
+                                        color = timeLabels,
+                                        # symbol = location,
+                                        # symbol_sequence = symbols,
                                         opacity = 0.4,
-                                        hover_data = ['file date',
-                                                      'file time'
-                                                      'location',
-                                                      'time within original file', 
-                                                      'time within condensed file', 
-                                                      'filename'],
+                                        hover_data = hoverdata,
+                                        hover_name = data['file date'],
                                         height = 900
                                         ),
                             )
@@ -82,17 +89,24 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     
     meta_df = pd.read_csv(config['raw_data_path'] + '/meta_data.csv')
     
+    file_stems = list(map(lambda path: Path(path).stem.split('.Table')[0], files))
+    
+    meta_df.index = meta_df.file_stems
+    meta_df = meta_df.loc[file_stems]
+    
     data = pd.DataFrame({'x' : embeddings[:,0], 
-                         'y': embeddings[:,1],
+                         'y':  embeddings[:,1],
                         'location': meta_df['site'],
                 'file date': meta_df['file_datetime'][0].split(' ')[0],
                 'file time': meta_df['file_datetime'][0].split(' ')[1],
-                        'time within original File' : meta_df['call_time'],
-                        'time within condensed File' : divisions_array,
+                        'time within original file' : meta_df['call_time'],
+                        'time within condensed file' : divisions_array,
                         'filename' : files_array})
 
     app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
-    app.layout = build_dash_layout(data, title, meta_df['file_datetime'])
+    app.layout = build_dash_layout(data, title, 
+                                   meta_df['file_datetime'].values, 
+                                   meta_df['site'].values)
 
     @app.callback(
         Output("table_container", "figure"),
@@ -106,8 +120,8 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
             return px.imshow(dummy_image(), height = 900), "file: ..."
         
         else:
-            time_in_file = clickData['points'][0]['customdata'][0]
-            file_path = clickData['points'][0]['customdata'][1]
+            time_in_file = clickData['points'][0]['customdata'][-2]
+            file_path = clickData['points'][0]['customdata'][-1]
             
             audio, sr, file_stem = load_audio(time_in_file, file_path)
             spec = create_specs(audio, file_path)
@@ -148,10 +162,17 @@ def create_specs(audio, t):
 
     S_dB = lb.amplitude_to_db(S, ref=np.max)
 
+    if config['preproc']['downsample']:
+        f_max = config['preproc']['downsample_sr'] / 2
+        reduce = config['preproc']['model_sr'] / (f_max * 2)
+        S_dB = S_dB[:int(S_dB.shape[0] / reduce), :]
+    else:
+        f_max = config['preproc']['model_sr'] / 2
+
     fig = px.imshow(S_dB, origin='lower', 
                     aspect = 'auto',
-                    y = np.linspace(50, 8000, S.shape[0]),
-                    x = np.linspace(0, 0.96, S.shape[1]),
+                    y = np.linspace(50, f_max, S_dB.shape[0]),
+                    x = np.linspace(0, 0.96, S_dB.shape[1]),
                     labels = {'x' : 'time in s', 
                             'y' : 'frequency in Hz'},
                     height = 850)

@@ -88,20 +88,20 @@ def compute_embeddings(audioEmbeddingsList, percentiles):
     centroids = np.array(centroids)
     return embeddings, centroids, timeLabels, classes
 
-def get_embeddings():
+def get_embeddings(limit = None):
     folders = glob.glob(config['pickled_data_path'])
-    acc_embeddings, file_list, lenghts = [], [], []
+    acc_embeddings, file_list, lengths = [], [], []
     
     for folder in folders:
         files = glob.glob(folder + '/*.pickle')
-        files = np.sort(files).astype(list)
+        files = np.sort(files).astype(list)[:limit]
         
         for file in files:
             
             with open(file, 'rb') as loadf:
                 audioEmbeddings = pickle.load(loadf)
                 acc_embeddings = [*acc_embeddings, *audioEmbeddings]
-                lenghts.append(len(audioEmbeddings))
+                lengths.append(len(audioEmbeddings))
                 file_list.append(file)
     
-    return acc_embeddings, folders, file_list, lenghts
+    return acc_embeddings, folders, file_list, lengths

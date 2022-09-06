@@ -91,8 +91,6 @@ def load_audio(annots):
 
     Args:
         annots (pd.DataFrame): annotations
-        downsample (bool, optional): specifies whether file should be resampled
-        or not. Defaults to False.
 
     Returns:
         np.array: audio array
@@ -140,7 +138,7 @@ def get_number_of_segs_per_call(annots):
     num_of_segs_per_call[num_of_segs_per_call == 0] = 1
     return num_of_segs_per_call
 
-def extract_segments(file, meta_df):
+def extract_segments(file):
     """
     Find annotation and sound file, load audio, create the 1d audio array
     consisting only of calls, gather metadata and save the resulting 
@@ -151,7 +149,6 @@ def extract_segments(file, meta_df):
 
     Args:
         file (string): path to annotation file
-        meta_df (pd.DataFrame): metadata of recordings
 
     Returns:
         pd.DataFrame: metadata of recordings
@@ -166,7 +163,7 @@ def extract_segments(file, meta_df):
     flat_call_array, segs_per_call = create_1d_call_array(segs_per_call, 
                                               annots, audio)
             
-    df, site = save_metadata(file, meta_df, annots, segs_per_call)
+    df, site = save_metadata(file, annots, segs_per_call)
     
     sf.write('interbed/files/raw/' + 
              Path(file).stem + f'_{site}_condensed.wav',
@@ -183,11 +180,24 @@ def create_1d_call_array(num_of_segs_per_call, annots, audio):
     is specified in the config.yaml file. Corresponding to the position
     within the original audio file, array of the above mentioned length 
     get extracted from the audio array and included into a matrix of 
-    dimensions (number of calls x audio segment length). 
+    dimensions (number of calls x audio segment length). Because the 
+    fft windows have a hop length of 0.025s, the final array needs to be
+    longer than just (number of calls x audio segment length x sample rate).
+    To correct for this the array is zero padded by the length of one audio
+    segment length.
+
     Using a matrix speeds things up. 
+    
     Finally the matrix is flattened into a 1d representation, thereby
     yielding an array that contains only windows of the specified length
     only containing the calls of the original file, all in sequence. 
+    (plus one zero padded array)
+    
+    In some rare cases, the last call may contain 2.6s of length, this
+    might correspond to 2.75 x audio segment length, because the 
+    num_of_segs_per_call array rounds up, this would lead to the segment
+    being longer than the audio file. To prevent an error from occuring,
+    the last entry is reduced by the resulting difference.
     
     This file can later be disected by the pretrained model and used
     to visualize the gathered segments, allowing for a visualization
@@ -198,56 +208,134 @@ def create_1d_call_array(num_of_segs_per_call, annots, audio):
         annots (pd.DataFrame): annotations
         audio (np.array): audio array
 
-    Returns:
-        np.array: 1d audio array of only calls
+    Returns: 
+        np.array, np.array: 1d audio array of only calls, corrected number
+        of segments per call array
     """
-    call_array = np.zeros([num_of_segs_per_call.sum(), 
-                           int(config['preproc']['model_time_length']*
-                               config['preproc']['model_sr'])])
+    call_array = init_call_array(num_of_segs_per_call)
+    
     cum = 0
     corr_segs_per_call = num_of_segs_per_call.copy()
+    
     for ind, row in annots.iterrows():
-        
-        for segment in range( num_of_segs_per_call[ind] ):
-            beg = int( (row.start -
-                        annots.start.values[0] +
-                        config['preproc']['model_time_length'] *
-                        segment
-                        ) * 
-                            config['preproc']['model_sr'])
-            
-            end = int(beg + 
-                      config['preproc']['model_time_length']*
-                            config['preproc']['model_sr'])
-            
+        for seg_num in range( num_of_segs_per_call[ind] ):
+            beg, end = get_segment_indices(annots, row, seg_num)
+                
             if end > len(audio):
                 continue
-            call_array[cum] = audio[ beg:end ] 
+            call_array[cum] = audio[ beg:end ]
             cum += 1
+            
     corr_segs_per_call.values[-1] -= sum(num_of_segs_per_call) - cum
     
-    return call_array[:cum].flatten(), corr_segs_per_call
+    return call_array[:cum+1].flatten(), corr_segs_per_call
 
-def extend_df(df, segs_per_call):
-    df = pd.DataFrame(np.repeat(df.values, segs_per_call, axis=0))
-    return df.rename(columns={0: 'call_time', 1: 'file', 
-                              2: 'file_datetime', 3: 'site'})
+def init_call_array(num_of_segs_per_call):
+    """
+    Initialize the call_array by building a matrix filled with zeros
+    with the dimensions of 
+    (total number of audio segments X frame rate * audio segment length)
+
+    Args:
+        num_of_segs_per_call (np.array): number of segments per call
+
+    Returns:
+        np.array: numpy matrix to be filled with audio segment
+    """
+    return np.zeros([num_of_segs_per_call.sum() + 1, 
+                    int(config['preproc']['model_time_length']*
+                        config['preproc']['model_sr'])])
+
+def get_segment_indices(annots, row, seg_num):
+    """
+    Return beginning and end of audio segment. 
+
+    Args:
+        annots (pd.DataFrame): annotations
+        row (pd.DataFrame): annotations row
+        seg_num (int): iteration of segments for current call
+
+    Returns:
+        int, int: beginning index in audio array, end index in audio array
+    """
+    beg = int( (row.start -
+                annots.start.values[0] +
+                config['preproc']['model_time_length'] *
+                seg_num
+                ) * 
+                    config['preproc']['model_sr'])
     
+    end = int(beg + 
+                config['preproc']['model_time_length']*
+                    config['preproc']['model_sr'])
+    return beg, end
+
+def extend_df(df_singles, segs_per_call):
+    """
+    Extend the DataFrame containing the starting positions to correspond 
+    to the length of the number of audio segments. 
+
+    Args:
+        df_singles (pd.DataFrame): dataframe before repeats
+        segs_per_call (pd.DataFrame): num of segments per call
+
+    Returns:
+        pd.DataFrame: dataframe after repeats
+    """
+    df_repeated = pd.DataFrame(np.repeat(df_singles.values, 
+                                         segs_per_call, axis=0))
+    return df_repeated.rename(columns={0: 'call_time', 1: 'file', 
+                              2: 'file_stems', 3: 'file_datetime',
+                              4: 'site'})
+    
+def string_to_time(s):
+    """
+    Return nicely formatted time string based on timestamp. 
+
+    Args:
+        s (dt.datetime object): starting times of calls
+
+    Returns:
+        string: nicely formatted string of starting time
+    """
+    return f'{int(s/60)}:{np.mod(s, 60):.2f}s'
         
-def save_metadata(file, meta_df, annots, segs_per_call):
+def save_metadata(file, annots, segs_per_call):
+    """
+    Write Metadata into DataFrame to save file specs and starting times
+    in original audio file. 
+
+    Args:
+        file (string): path to original audio file
+        annots (pd.dataframe): annotations
+        segs_per_call (pd.dataframe): num of segs per call
+
+    Returns:
+        pd.dataframe, string: metadata dataframe, location
+    """
     df = pd.DataFrame()
-    s_to_time = lambda s: f'{int(s/60)}:{np.mod(s, 60):.2f}s'
-    df['call_time'] = list(map(s_to_time, annots.start))
+    
+    df['call_time'] = list(map(string_to_time, annots.start))
     df['file'] = annots.filename
+    df['file_stem'] = Path(file).stem.split('.Table')[0]
     df['file_datetime'] = get_filename_pattern(file)
     df['site'] = get_site(annots.filename[0])
     
-    df = extend_df(df, segs_per_call)
-    df['lengths'] = sum(segs_per_call)
-    return pd.concat([meta_df, df]), df['site'].iloc[0]
+    df_repeated = extend_df(df, segs_per_call)
+    df_repeated['lengths'] = sum(segs_per_call)
+    
+    return df_repeated, df_repeated['site'].iloc[0]
 
 def get_filename_pattern(file):
-    
+    """
+    Return datetime from file name. Catch special cases. 
+
+    Args:
+        file (string): path to annotation file
+
+    Returns:
+        dt.Datetime: datetime object of time data within file name 
+    """
     if Path(file).stem[0] == 'P':
         string = Path(file).stem
         file_date = pd.to_datetime(string.split('.Table')[0], 
@@ -263,15 +351,25 @@ def get_filename_pattern(file):
     return file_date
     
 def condense_files_into_only_calls():
+    """
+    Run through all files wihtin the parent annotations directory and produce
+    new files that only contain calls. This is a preparation for the files
+    to be read by the umap visualization tools and to only contain calls of
+    the original dataset. 
+    """
     annotation_files = glob.glob(
                             config['preproc']['annots_path'] + '/**/*.txt',
                                recursive=True)
     meta_df = pd.DataFrame()
+    
     for ind, file in enumerate(list(annotation_files)):
+        
         print('\n', 
               f'{ind/len(list(annotation_files)) * 100:.0f} % complete | ',
               'now compressing file: ', Path(file).stem)
-        meta_df = extract_segments(file, meta_df)
+        
+        meta_df = pd.concat([meta_df, extract_segments(file)])
+        
     meta_df.to_csv(config['raw_data_path'] + '/meta_data.csv')
     
 if __name__ == '__main__':

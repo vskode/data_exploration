@@ -74,18 +74,15 @@ def main():
 	destination = Path(config['pickled_data_path'])
 	wavs = []
 
-	for file in directory.iterdir():
+	for file in list(directory.iterdir()):
 		if not file.suffix in ['.WAV', '.wav']:
 			continue
 		print('embedding file: ', file.stem)
 
 		# Create a list of lists to store embeddings in order
 		embeddingsList = []
-		try:
-			examples_batch = vggish_input.wavfile_to_examples(file)
-		except Exception as e:
-			print(e)
-			continue
+  
+		examples_batch = vggish_input.wavfile_to_examples(file)
 
 		# Prepare a postprocessor to munge the model embeddings.
 		pproc = vggish_postprocess.Postprocessor(config["pca_params"])
