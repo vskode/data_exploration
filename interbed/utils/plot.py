@@ -50,7 +50,7 @@ def build_dash_layout(data, title, timeLabels, location=None):
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
-                                        color = timeLabels,
+                                        color = data['file stems'],
                                         # symbol = location,
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
@@ -78,6 +78,15 @@ def build_dash_layout(data, title, timeLabels, location=None):
         ]
     )    
 
+def fix_misalligned_df(meta_df, file_stems, lengths):
+    a = [len(np.where(meta_df.file_stems == stem)[0]) for stem in file_stems]
+    a = np.array(a)
+    for i in np.where(abs(lengths-a)>0)[0]:
+        bool_len = (meta_df.lengths != lengths[i]).values
+        bool_stem = (meta_df.file_stems == file_stems[i]).values
+        meta_df = meta_df[~(bool_len * bool_stem)]
+    return meta_df
+
 def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
                                colormap, files, lengths, 
                                title = config['title'] ):
@@ -94,6 +103,9 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     meta_df.index = meta_df.file_stems
     meta_df = meta_df.loc[file_stems]
     
+    if len(meta_df) != len(files_array):
+        meta_df = fix_misalligned_df(meta_df, file_stems, lengths)
+    
     data = pd.DataFrame({'x' : embeddings[:,0], 
                          'y':  embeddings[:,1],
                         'location': meta_df['site'],
@@ -101,7 +113,8 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
                 'file time': meta_df['file_datetime'][0].split(' ')[1],
                         'time within original file' : meta_df['call_time'],
                         'time within condensed file' : divisions_array,
-                        'filename' : files_array})
+                        'filename' : files_array,
+                        'file stems': meta_df.file_stems})
 
     app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
     app.layout = build_dash_layout(data, title, 

@@ -46,9 +46,6 @@ Usage:
 
 from __future__ import print_function
 
-import numpy as np
-import six
-import soundfile
 import tensorflow.compat.v1 as tf
 import pickle
 from pathlib import Path
@@ -74,7 +71,7 @@ def main():
 	destination = Path(config['pickled_data_path'])
 	wavs = []
 
-	for file in list(directory.iterdir()):
+	for file in directory.iterdir():
 		if not file.suffix in ['.WAV', '.wav']:
 			continue
 		print('embedding file: ', file.stem)
