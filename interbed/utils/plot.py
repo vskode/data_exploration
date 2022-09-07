@@ -151,7 +151,14 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     app.run_server(debug = False)
     
 def play_audio(audio, sr):
-    sd.play(audio, sr)
+    smoothing = np.cos(np.linspace(0,np.pi/2,500))
+    test = [*[0]*500, 
+            *audio[500:1000]*30*smoothing[::-1], 
+            *audio[1000:-5000]*30, 
+            *audio[-3500:-1000]*30*np.cos(np.linspace(0,np.pi/2,2500)), 
+            *[0]*1000]
+    sd.play(test, sr)
+    # sd.play(audio, sr)
     
 def time_string_to_float(t):
     minu = int(t.split(':')[0])*60
