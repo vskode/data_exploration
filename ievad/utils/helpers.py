@@ -6,7 +6,7 @@ import librosa as lb
 import soundfile as sf
 from pathlib import Path
 
-with open('inemviz/config.yaml', 'rb') as f:
+with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
 

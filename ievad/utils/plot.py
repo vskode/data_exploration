@@ -9,9 +9,9 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from inemviz.utils.helpers import get_datetime_from_filename
+from ievad.utils.helpers import get_datetime_from_filename
 
-with open('inemviz/config.yaml', 'rb') as f:
+with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
 def plot_wo_specs(data, timeLabels, title, centroids, classes):

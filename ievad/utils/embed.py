@@ -49,14 +49,14 @@ from __future__ import print_function
 import tensorflow.compat.v1 as tf
 import pickle
 from pathlib import Path
-from inemviz.vggish import vggish_input
-from inemviz.vggish import vggish_params
-from inemviz.vggish import vggish_postprocess
-from inemviz.vggish import vggish_slim
+from ievad.vggish import vggish_input
+from ievad.vggish import vggish_params
+from ievad.vggish import vggish_postprocess
+from ievad.vggish import vggish_slim
 import yaml
 import os
     
-with open('inemviz/config.yaml', "r") as f:
+with open('ievad/config.yaml', "r") as f:
     config =  yaml.safe_load(f)
     
 def main():

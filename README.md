@@ -1,8 +1,7 @@
-# **inemviz** - **in**teractive **em**bedding **vi**suali**z**ation
-
+# IEVAD - Interactive Embedding Visualizations of Acoustic Datasets
 ## Combine UMAP and interactive Visualizations to explore large acoustic datasets intuitively
 
-inemviz uses plotly's dash library to provide an interactive visualization for your acoustic dataset.
+ievad uses plotly's dash library to provide an interactive visualization for your acoustic dataset.
 
 <!-- ![example of visualization](docs/imgs/example.png) -->
 ![example of visualization](docs/imgs/example.gif)
