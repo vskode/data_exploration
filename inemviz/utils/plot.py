@@ -9,8 +9,9 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
+from inemviz.utils.helpers import get_datetime_from_filename
 
-with open('interbed/config.yaml', 'rb') as f:
+with open('inemviz/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
 def plot_wo_specs(data, timeLabels, title, centroids, classes):
@@ -71,21 +72,26 @@ def build_dash_layout(data, title, timeLabels, location=None):
                                     'Autoplay off', id='radio_autoplay'),
                     dash.dcc.Graph(id="table_container", 
                                    figure = px.imshow(dummy_image(), 
-                                                      height = 900)
+                                                      height = 500)
                                    ),
             ], style={'width': '25%', 'display': 'inline-block',
                       'vertical-align': 'top'})
         ]
     )    
 
-def fix_misalligned_df(meta_df, file_stems, lengths):
-    a = [len(np.where(meta_df.file_stems == stem)[0]) for stem in file_stems]
-    a = np.array(a)
-    for i in np.where(abs(lengths-a)>0)[0]:
-        bool_len = (meta_df.lengths != lengths[i]).values
-        bool_stem = (meta_df.file_stems == file_stems[i]).values
-        meta_df = meta_df[~(bool_len * bool_stem)]
-    return meta_df
+def align_df_and_embeddings(files, meta_df):
+    tup = zip(pd.to_datetime(meta_df.file_datetime).values, 
+                   meta_df.site.values)
+    
+    meta_df.index = pd.MultiIndex.from_tuples(tup, names=['datetime', 'site'])
+
+    datetimes = map(get_datetime_from_filename, files)
+    sites = map(get_site_from_filename, files)
+
+    return meta_df.loc[zip(datetimes, sites)]
+
+def get_site_from_filename(file_path):
+    return Path(file_path).stem.split('_')[-2]
 
 def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
                                colormap, files, lengths, 
@@ -98,13 +104,7 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     
     meta_df = pd.read_csv(config['raw_data_path'] + '/meta_data.csv')
     
-    file_stems = list(map(lambda path: Path(path).stem.split('.Table')[0], files))
-    
-    meta_df.index = meta_df.file_stems
-    meta_df = meta_df.loc[file_stems]
-    
-    if len(meta_df) != len(files_array):
-        meta_df = fix_misalligned_df(meta_df, file_stems, lengths)
+    meta_df = align_df_and_embeddings(files, meta_df)
     
     data = pd.DataFrame({'x' : embeddings[:,0], 
                          'y':  embeddings[:,1],
@@ -144,7 +144,11 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
         if "play_audio_btn" == dash.ctx.triggered_id:
             play_audio(audio, sr)
             
-        title = f"file: {file_stem} at {time_in_file}"
+        title = dash.html.P([f"file: {file_stem.split('.Table')[0]}",
+                             dash.html.Br(),
+                            f"time in file: {time_in_file}",
+                             dash.html.Br(),
+                            f"location: {file_stem.split('_')[-2]}"])
             
         return spec, title
     
@@ -195,5 +199,5 @@ def create_specs(audio, t):
                     x = np.linspace(0, 0.96, S_dB.shape[1]),
                     labels = {'x' : 'time in s', 
                             'y' : 'frequency in Hz'},
-                    height = 850)
+                    height = 800)
     return fig

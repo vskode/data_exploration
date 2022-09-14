@@ -18,7 +18,7 @@
 import numpy as np
 import resampy
 
-import interbed.vggish.mel_features as mel_features
+import inemviz.vggish.mel_features as mel_features
 from . import vggish_params
 
 try:

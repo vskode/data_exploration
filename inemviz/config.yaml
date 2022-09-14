@@ -1,8 +1,8 @@
 ## MAIN VARS ##
 # PATHS:
 # define paths for your data
-raw_data_path :       "interbed/files/raw"
-pickled_data_path :   "interbed/files/embeds"
+raw_data_path :       "inemviz/files/raw/"
+pickled_data_path :   "inemviz/files/embeds/"
 
 # length of files in s
 length_of_file:       729.6
@@ -13,8 +13,8 @@ title :               "UMAP Embedding"
 
 # MODEL:
 # relevant files for the model
-checkpoint :          "interbed/vggish/vggish_model.ckpt"
-pca_params :          "interbed/vggish/vggish_pca_params.npz"
+checkpoint :          "inemviz/vggish/vggish_model.ckpt"
+pca_params :          "inemviz/vggish/vggish_pca_params.npz"
 
 
 ## HELPER VARS ##
@@ -22,7 +22,7 @@ pca_params :          "interbed/vggish/vggish_pca_params.npz"
 preproc:
   # main parent directory containing all annotatoin files
   annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
-  sound_files_path:   '/media/vincent/Seagate Backup Plus Drive'
+  sound_files_path:   '/media/vincent/Seagate Backup Plus Drive/VINCENT_RawData'
   downsample_sr:      2000
   downsample:          True
   model_sr:           16000
