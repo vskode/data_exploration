@@ -1,7 +1,10 @@
 ## MAIN VARS ##
 # PATHS:
-# define paths for your data
+# define paths for your data, these are the standard directories, if you 
+# used the file condenser. If you do not have annotated data, and all of your
+# sound files are in one directory, change accordingly
 raw_data_path :       "ievad/files/raw/"
+# fixed path, embeddings will be stored here, do not change
 pickled_data_path :   "ievad/files/embeds/"
 
 # length of files in s
@@ -20,10 +23,15 @@ pca_params :          "ievad/vggish/vggish_pca_params.npz"
 ## HELPER VARS ##
 # preprocessing configurations
 preproc:
-  # main parent directory containing all annotatoin files
+  # main parent directory containing all annotation files
   annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
+  # main parent directory containing all sound files
   sound_files_path:   '/media/vincent/Seagate Backup Plus Drive/VINCENT_RawData'
+  # set to lowest sample rate in your dataset, to ensure comparability
   downsample_sr:      2000
-  downsample:          True
+  # if you don't want to downsample the data to a common sample rate, set to 'False'
+  downsample:         True
+
+  ## Fixed model parameters, do not change
   model_sr:           16000
   model_time_length:  0.96
