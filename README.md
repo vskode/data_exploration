@@ -1,4 +1,4 @@
-# inemviz - interactive embedding visualization
+# **inemviz** - **in**teractive **em**bedding **vi**suali**z**ation
 
 ## Combine UMAP and interactive Visualizations to explore large datasets
 
