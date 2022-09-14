@@ -1,8 +1,8 @@
 ## MAIN VARS ##
 # PATHS:
 # define paths for your data
-raw_data_path :       "inemviz/files/raw/"
-pickled_data_path :   "inemviz/files/embeds/"
+raw_data_path :       "ievad/files/raw/"
+pickled_data_path :   "ievad/files/embeds/"
 
 # length of files in s
 length_of_file:       729.6
@@ -13,8 +13,8 @@ title :               "UMAP Embedding"
 
 # MODEL:
 # relevant files for the model
-checkpoint :          "inemviz/vggish/vggish_model.ckpt"
-pca_params :          "inemviz/vggish/vggish_pca_params.npz"
+checkpoint :          "ievad/vggish/vggish_model.ckpt"
+pca_params :          "ievad/vggish/vggish_pca_params.npz"
 
 
 ## HELPER VARS ##
