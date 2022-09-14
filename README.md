@@ -1,8 +1,8 @@
 # **inemviz** - **in**teractive **em**bedding **vi**suali**z**ation
 
-## Combine UMAP and interactive Visualizations to explore large datasets
+## Combine UMAP and interactive Visualizations to explore large acoustic datasets intuitively
 
-inemviz uses plotly's dash library to provide an interactive visualization for your dataset.
+inemviz uses plotly's dash library to provide an interactive visualization for your acoustic dataset.
 
 <!-- ![example of visualization](docs/imgs/example.png) -->
 ![example of visualization](docs/imgs/example.gif)
