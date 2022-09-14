@@ -90,13 +90,6 @@ def get_site(file):
         site = 'StantonBank'
     else:
         site = 'SAMOSAS'
-    # try:
-    #     site = Path(file).parent.parent.stem.split('_')[1]
-    # except Exception as e:
-    #     print(e)
-    #     site = Path(file).parent.parent.parent.stem.split('_')[1]
-    # if site == 'S1':
-    #     site = 'SAMOSAS'
     return site
 
 def load_audio(annots):
