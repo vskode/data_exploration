@@ -6,7 +6,7 @@ import librosa as lb
 import soundfile as sf
 from pathlib import Path
 
-with open('interbed/config.yaml', 'rb') as f:
+with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
 
@@ -43,8 +43,14 @@ def get_corresponding_sound_file(file):
             if not file_path :
                 return f'{Path(file).stem.split("Table")[0]}wav'
             
+    if len(file_path) > 1:
+        for path in file_path:
+            if Path(file).parent.parent.stem in path:
+                file_path = path
+    else:
+        file_path = file_path[0]
             
-    return file_path[0]
+    return file_path
     
 def standardize_annotations(file):
     """
@@ -78,9 +84,19 @@ def get_site(file):
     Returns:
         string: location specified in parent directory of path
     """
-    site = list(Path(file).parents)[-6].stem.split('_')[0]
-    if site == 'S1':
-        site = 'Gravelly sand'
+    if 'Tolsta' in file:
+        site = 'Tolsta'
+    elif 'StantonBank' in file:
+        site = 'StantonBank'
+    else:
+        site = 'SAMOSAS'
+    # try:
+    #     site = Path(file).parent.parent.stem.split('_')[1]
+    # except Exception as e:
+    #     print(e)
+    #     site = Path(file).parent.parent.parent.stem.split('_')[1]
+    # if site == 'S1':
+    #     site = 'SAMOSAS'
     return site
 
 def load_audio(annots):
@@ -165,9 +181,11 @@ def extract_segments(file):
             
     df, site = save_metadata(file, annots, segs_per_call)
     
-    sf.write('interbed/files/raw/' + 
-             Path(file).stem + f'_{site}_condensed.wav',
-             flat_call_array, samplerate = config['preproc']['model_sr'])
+    with open(config['raw_data_path'] + 
+             Path(file).stem + f'_{site}_condensed.wav', 'wb') as f:
+        sf.write(f, flat_call_array, 
+                 samplerate = config['preproc']['model_sr'])
+    
     
     return df
     
@@ -318,7 +336,7 @@ def save_metadata(file, annots, segs_per_call):
     df['call_time'] = list(map(string_to_time, annots.start))
     df['file'] = annots.filename
     df['file_stem'] = Path(file).stem.split('.Table')[0]
-    df['file_datetime'] = get_filename_pattern(file)
+    df['file_datetime'] = get_datetime_from_filename(file)
     df['site'] = get_site(annots.filename[0])
     
     df_repeated = extend_df(df, segs_per_call)
@@ -326,7 +344,7 @@ def save_metadata(file, annots, segs_per_call):
     
     return df_repeated, df_repeated['site'].iloc[0]
 
-def get_filename_pattern(file):
+def get_datetime_from_filename(file):
     """
     Return datetime from file name. Catch special cases. 
 

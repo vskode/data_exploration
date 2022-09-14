@@ -35,9 +35,9 @@ Usage:
 	# a TFRecord file. The model checkpoint and PCA parameters are explicitly
 	# passed in as well.
 	$ python vggish_inference_demo.py --wav_file /path/to/a/wav/file \
-                                    --tfrecord_file /path/to/tfrecord/file \
-                                    --checkpoint /path/to/model/checkpoint \
-                                    --pca_params /path/to/pca/params
+																		--tfrecord_file /path/to/tfrecord/file \
+																		--checkpoint /path/to/model/checkpoint \
+																		--pca_params /path/to/pca/params
 
 	# Run a built-in input (a sine wav) through the model and print the
 	# embeddings. Associated model files are read from the current directory.
@@ -46,19 +46,23 @@ Usage:
 
 from __future__ import print_function
 
+import numpy as np
+import six
+import soundfile
 import tensorflow.compat.v1 as tf
 import pickle
 from pathlib import Path
-from interbed.vggish import vggish_input
-from interbed.vggish import vggish_params
-from interbed.vggish import vggish_postprocess
-from interbed.vggish import vggish_slim
+import vggish_input
+import vggish_params
+import vggish_postprocess
+import vggish_slim
 import yaml
 import os
     
-with open('interbed/config.yaml', "r") as f:
+with open('config.yaml', "r") as f:
     config =  yaml.safe_load(f)
     
+
 def main():
 	"""
 	Write the postprocessed embeddings as a SequenceExample, in a similar
@@ -72,14 +76,13 @@ def main():
 	wavs = []
 
 	for file in directory.iterdir():
-		if not file.suffix in ['.WAV', '.wav']:
-			continue
-		print('embedding file: ', file.stem)
-
+		if file.suffix in ['.WAV', '.wav']:
+			wavs.append(file)
+   
+	for wav in wavs:
 		# Create a list of lists to store embeddings in order
 		embeddingsList = []
-  
-		examples_batch = vggish_input.wavfile_to_examples(file)
+		examples_batch = vggish_input.wavfile_to_examples(wav)
 
 		# Prepare a postprocessor to munge the model embeddings.
 		pproc = vggish_postprocess.Postprocessor(config["pca_params"])
@@ -88,28 +91,31 @@ def main():
 			# Define the model in inference mode, load the checkpoint, and
 			# locate input and output tensors.
 			vggish_slim.define_vggish_slim(training=False)
-
+   
 			vggish_slim.load_vggish_slim_checkpoint(sess, config["checkpoint"])
-
+   
 			features_tensor = sess.graph.get_tensor_by_name(
 					vggish_params.INPUT_TENSOR_NAME)
-
+   
 			embedding_tensor = sess.graph.get_tensor_by_name(
 					vggish_params.OUTPUT_TENSOR_NAME)
 
 			# Run inference and postprocessing.
 			[embedding_batch] = sess.run([embedding_tensor], 
 								feed_dict={features_tensor: examples_batch})
+ 
 
 			postprocessed_batch = pproc.postprocess(embedding_batch)
-
+   
 			for embedding in postprocessed_batch:
 				embeddingsList.append(embedding)
 
-			file_dest = destination.joinpath(file.stem + file.suffix + '.pickle')
-
-			with open(file_dest, 'wb') as f:
-				pickle.dump(embeddingsList, f, protocol=pickle.HIGHEST_PROTOCOL)
+			with open(destination.joinpath(wav.stem + wav.suffix + '.pickle'), 
+											'wb') as handle:
+				pickle.dump(embeddingsList, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
 	main()
+
+
+

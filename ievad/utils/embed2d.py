@@ -13,7 +13,7 @@ import pickle
 import numpy as np
 import pandas as pd
  
-with open('interbed/config.yaml', 'rb') as f:
+with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
 pd.set_option('display.max_columns', None)
