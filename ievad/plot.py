@@ -9,10 +9,12 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
-from ievad.utils.helpers import get_datetime_from_filename
+from ievad.helpers import get_datetime_from_filename
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
+
+PATH = path = f"{config['raw_data_path']}/{Path(Path(config['preproc']['annots_path']).stem)}"
 
 def plot_wo_specs(data, timeLabels, title, centroids, classes):
     fig = px.scatter(data, x='x', y='y', color=timeLabels, opacity = 0.4,
@@ -101,8 +103,8 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     embeddings, cen, timeLabels, classes = tup
 
     divisions_array, files_array = embed2d.create_timeList(lengths, files)
-    
-    meta_df = pd.read_csv(config['raw_data_path'] + '/meta_data.csv')
+        
+    meta_df = pd.read_csv(PATH + '/meta_data.csv')
     
     meta_df = align_df_and_embeddings(files, meta_df)
     
@@ -172,7 +174,7 @@ def time_string_to_float(t):
     
 def load_audio(t_s, file):
     file_stem = Path(file).stem
-    main_path = Path(config['raw_data_path'])
+    main_path = Path(PATH)
 
     t_f = time_string_to_float(t_s)
     

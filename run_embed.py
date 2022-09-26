@@ -1,3 +1,3 @@
-from ievad.utils.embed import main
+from ievad.embed import main
 
 main()

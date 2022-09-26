@@ -35,13 +35,19 @@ def get_corresponding_sound_file(file):
         file_path = glob.glob(f'{hard_drive_path}/**/{file_tolsta}',
                     recursive = True)
         
-        if not file_path :
-            file_tolsta = '335564853.' + new_file[6:].replace(
-                                            '5_000', '4').replace('_', '')
-            file_path = glob.glob(f'{hard_drive_path}/**/{file_tolsta}',
-                        recursive = True)
-            if not file_path :
-                return f'{Path(file).stem.split("Table")[0]}wav'
+    if not file_path :
+        file_tolsta = '335564853.' + new_file[6:].replace(
+                                        '5_000', '4').replace('_', '')
+        file_path = glob.glob(f'{hard_drive_path}/**/{file_tolsta}',
+                    recursive = True)
+        
+    if not file_path :
+        file_tolsta = Path(file).stem.split('_annot')[0]
+        file_path = glob.glob(f'{hard_drive_path}/{file_tolsta}*',
+                    recursive = True)
+        
+    if not file_path :
+        return f'{Path(file).stem.split("Table")[0]}wav'
             
     if len(file_path) > 1:
         for path in file_path:
@@ -68,7 +74,10 @@ def standardize_annotations(file):
     ann = pd.read_csv(file, sep = '\t')
 
     ann['filename'] = get_corresponding_sound_file(file)
-    ann['label']    = 1
+    if config['preds_column'] in ann.columns:
+        ann['label'] = ann[config['preds_column']]
+    else:
+        ann['label']    = 1
     ann = ann.rename(columns = { 'Begin Time (s)' : 'start', 
                                 'End Time (s)' : 'end' })
     ann = ann.sort_values('start', ignore_index = True)
@@ -355,10 +364,13 @@ def get_datetime_from_filename(file):
         string = Path(file).stem.split('A_')[1]
         file_date = pd.to_datetime(string.split('.Table')[0],
                                     format='%Y-%m-%d_%H-%M-%S')
-    else:
+    elif '.Table' in Path(file).stem:
         string = Path(file).stem.split('.')[1]
         file_date = pd.to_datetime(string.split('.Table')[0], 
                                     format='%y%m%d%H%M%S')
+    else:
+        string = Path(file).stem.replace('NRS08_','').split('_annot')[0]
+        file_date = pd.to_datetime(string, format='%Y%m%d_%H%M%S')
     return file_date
     
 def condense_files_into_only_calls():
@@ -373,6 +385,10 @@ def condense_files_into_only_calls():
                                recursive=True)
     meta_df = pd.DataFrame()
     
+    Path(config['raw_data_path']).mkdir(
+        Path(config['preproc']['annots_path']).stem, exist_ok=True
+        )
+    
     for ind, file in enumerate(list(annotation_files)):
         
         print('\n', 
@@ -381,7 +397,10 @@ def condense_files_into_only_calls():
         
         meta_df = pd.concat([meta_df, extract_segments(file)])
         
-    meta_df.to_csv(config['raw_data_path'] + '/meta_data.csv')
+    
+    meta_df.to_csv(config['raw_data_path']
+                   + f"/{Path(config['preproc']['annots_path']).stem}"
+                   + '/meta_data.csv')
     
 if __name__ == '__main__':
     condense_files_into_only_calls()

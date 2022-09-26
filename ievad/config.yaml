@@ -19,14 +19,20 @@ title :               "UMAP Embedding"
 checkpoint :          "ievad/vggish/vggish_model.ckpt"
 pca_params :          "ievad/vggish/vggish_pca_params.npz"
 
+# PREDICTIONS:
+# column name of model prediction values
+preds_column: 'Prediction value'
+
 
 ## HELPER VARS ##
 # preprocessing configurations
 preproc:
   # main parent directory containing all annotation files
   annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
+  # annots_path:        '/home/vincent/Code/MA/generated_annotations/for_umap'
   # main parent directory containing all sound files
   sound_files_path:   '/media/vincent/Seagate Backup Plus Drive/VINCENT_RawData'
+  # sound_files_path:   '/media/vincent/Expansion/NOAA/NRS08_20162018_new20220711'
   # set to lowest sample rate in your dataset, to ensure comparability
   downsample_sr:      2000
   # if you don't want to downsample the data to a common sample rate, set to 'False'
@@ -35,3 +41,4 @@ preproc:
   ## Fixed model parameters, do not change
   model_sr:           16000
   model_time_length:  0.96
+
