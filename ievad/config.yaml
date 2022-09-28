@@ -1,18 +1,27 @@
 ## MAIN VARS ##
+
 # PATHS:
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-raw_data_path :       "ievad/files/raw/"
+raw_data_path :       "ievad/files/raw"
 # fixed path, embeddings will be stored here, do not change
-pickled_data_path :   "ievad/files/embeds/"
+pickled_data_path :   "ievad/files/embeds"
 
-# length of files in s
-length_of_file:       729.6
+# length limitation for condensed file
+segs_lim:             1500
 
 # PLOTTING:
 # heading for main interactive plot
 title :               "UMAP Embedding"
+spec_win_len:         512
+umap_height:          900
+spec_height:          800
+f_min:                50
+
+# PLAYBACK:
+# amplify audio to make audible
+amp:                  30
 
 # MODEL:
 # relevant files for the model
@@ -21,18 +30,18 @@ pca_params :          "ievad/vggish/vggish_pca_params.npz"
 
 # PREDICTIONS:
 # column name of model prediction values
-preds_column: 'Prediction value'
+preds_column:         'Prediction value'
 
 
 ## HELPER VARS ##
 # preprocessing configurations
 preproc:
   # main parent directory containing all annotation files
-  annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
-  # annots_path:        '/home/vincent/Code/MA/generated_annotations/for_umap'
+  # annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
+  annots_path:        '/home/vincent/Code/MA/generated_annotations/for_umap'
   # main parent directory containing all sound files
-  sound_files_path:   '/media/vincent/Seagate Backup Plus Drive/VINCENT_RawData'
-  # sound_files_path:   '/media/vincent/Expansion/NOAA/NRS08_20162018_new20220711'
+  # sound_files_path:   '/media/vincent/Seagate Backup Plus Drive/VINCENT_RawData'
+  sound_files_path:   '/media/vincent/Expansion/NOAA/NRS08_20162018_new20220711'
   # set to lowest sample rate in your dataset, to ensure comparability
   downsample_sr:      2000
   # if you don't want to downsample the data to a common sample rate, set to 'False'

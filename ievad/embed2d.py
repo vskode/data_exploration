@@ -12,9 +12,14 @@ import yaml
 import pickle
 import numpy as np
 import pandas as pd
+from pathlib import Path
  
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
+    
+LOAD_PATH = Path(config['pickled_data_path']).joinpath(
+            Path(config['preproc']['annots_path']).stem
+            )   
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 10)
@@ -66,7 +71,6 @@ def calculateCentroids_Classes(l):
 	return centroid
     
 def create_timeList(lengths, files):
-    # lin_array = np.linspace(0, config['length_of_file'], lengths[0])
     lin_array = np.arange(0, max(lengths), 0.96)
     files_array = []
     divisions_array = []
@@ -89,11 +93,14 @@ def compute_embeddings(audioEmbeddingsList, percentiles):
     return embeddings, centroids, timeLabels, classes
 
 def get_embeddings(limit = None):
-    folders = glob.glob(config['pickled_data_path'])
+    # TODO einfügen, dass man auch nicht condensed files laden kann,
+    # in dem fall wären es dann ganz viele ordner
+    # folders = glob.glob(config['pickled_data_path']) 
+    folders = [LOAD_PATH] 
     acc_embeddings, file_list, lengths = [], [], []
     
     for folder in folders:
-        files = glob.glob(folder + '/*.pickle')
+        files = list(folder.glob('*.pickle'))
         files = np.sort(files).astype(list)[:limit]
         
         for file in files:

@@ -59,6 +59,10 @@ import os
 with open('ievad/config.yaml', "r") as f:
     config =  yaml.safe_load(f)
     
+LOAD_PATH = Path(config['raw_data_path']).joinpath(
+            Path(config['preproc']['annots_path']).stem
+            )    
+
 def main():
 	"""
 	Write the postprocessed embeddings as a SequenceExample, in a similar
@@ -67,8 +71,9 @@ def main():
 	the rows are written as a sequence of bytes-valued features, where each
 	feature value contains the 128 bytes of the whitened quantized embedding.
 	"""
-	directory = Path(config['raw_data_path'])
-	destination = Path(config['pickled_data_path'])
+	directory = LOAD_PATH
+	destination = Path(config['pickled_data_path']).joinpath(LOAD_PATH.stem)
+	destination.mkdir(exist_ok=True)
 	wavs = []
 
 	for file in directory.iterdir():

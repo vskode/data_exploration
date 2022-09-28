@@ -5,10 +5,14 @@ import pandas as pd
 import librosa as lb
 import soundfile as sf
 from pathlib import Path
+from ievad.vggish import vggish_params
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
+SAVE_PATH = Path(config['raw_data_path']).joinpath(
+            Path(config['preproc']['annots_path']).stem
+            )
 
 def get_corresponding_sound_file(file):
     """
@@ -171,6 +175,11 @@ def extract_segments(file):
     Returns:
         pd.DataFrame: metadata of recordings
     """
+    call_len = (config['preproc']['model_sr']
+                *config['preproc']['model_time_length'])
+    n = int(config['segs_lim']*call_len)
+    win_length = int(vggish_params.SAMPLE_RATE
+                  * vggish_params.STFT_WINDOW_LENGTH_SECONDS)
     
     annots = standardize_annotations(file)
     
@@ -178,16 +187,24 @@ def extract_segments(file):
     
     segs_per_call = get_number_of_segs_per_call(annots)
     
-    flat_call_array, segs_per_call = create_1d_call_array(segs_per_call, 
-                                              annots, audio)
-            
-    df, site = save_metadata(file, annots, segs_per_call)
+    calls_1d_all, segs_per_call = create_1d_call_array(segs_per_call, 
+                                                        annots, audio)
     
-    with open(config['raw_data_path'] + 
-             Path(file).stem + f'_{site}_condensed.wav', 'wb') as f:
-        sf.write(f, flat_call_array, 
-                 samplerate = config['preproc']['model_sr'])
+    if len(calls_1d_all) >= n:
+        calls_1d_temp = [calls_1d_all[i:i+n] \
+                        for i in range(0, len(calls_1d_all), n)]
+        calls_1d_list = []
+        for array in calls_1d_temp[:-1]:
+            calls_1d_list.append(np.append(array, np.zeros(win_length)))
+        calls_1d_list.append(calls_1d_temp[-1])
+    else:
+        calls_1d_list = [calls_1d_all]
     
+    df, file_name = append_metadata(file, annots, segs_per_call)
+    
+    for part, calls_1d in enumerate(calls_1d_list):    
+        with open(file_name.format(part=part), 'wb') as f:
+            sf.write(f, calls_1d, samplerate = config['preproc']['model_sr'])
     
     return df
     
@@ -263,8 +280,8 @@ def init_call_array(num_of_segs_per_call):
         np.array: numpy matrix to be filled with audio segment
     """
     return np.zeros([num_of_segs_per_call.sum() + 1, 
-                    int(config['preproc']['model_time_length']*
-                        config['preproc']['model_sr'])])
+                    int(config['preproc']['model_time_length']
+                        * config['preproc']['model_sr'])])
 
 def get_segment_indices(annots, row, seg_num):
     """
@@ -278,16 +295,14 @@ def get_segment_indices(annots, row, seg_num):
     Returns:
         int, int: beginning index in audio array, end index in audio array
     """
-    beg = int( (row.start -
-                annots.start.values[0] +
-                config['preproc']['model_time_length'] *
-                seg_num
-                ) * 
-                    config['preproc']['model_sr'])
+    beg = int((row.start
+                - annots.start.values[0]
+                + config['preproc']['model_time_length']
+                * seg_num) 
+              * config['preproc']['model_sr'])
     
-    end = int(beg + 
-                config['preproc']['model_time_length']*
-                    config['preproc']['model_sr'])
+    end = int(beg + config['preproc']['model_time_length']
+              * config['preproc']['model_sr'])
     return beg, end
 
 def extend_df(df_singles, segs_per_call):
@@ -302,11 +317,10 @@ def extend_df(df_singles, segs_per_call):
     Returns:
         pd.DataFrame: dataframe after repeats
     """
-    df_repeated = pd.DataFrame(np.repeat(df_singles.values, 
-                                         segs_per_call, axis=0))
-    return df_repeated.rename(columns={0: 'call_time', 1: 'file', 
-                              2: 'file_stems', 3: 'file_datetime',
-                              4: 'site'})
+    df_repeated = pd.DataFrame(np.repeat(df_singles.to_numpy(), 
+                                         segs_per_call, axis=0), 
+                               columns=df_singles.columns)
+    return df_repeated
     
 def string_to_time(s):
     """
@@ -320,7 +334,7 @@ def string_to_time(s):
     """
     return f'{int(s/60)}:{np.mod(s, 60):.2f}s'
         
-def save_metadata(file, annots, segs_per_call):
+def append_metadata(file, annots, segs_per_call):
     """
     Write Metadata into DataFrame to save file specs and starting times
     in original audio file. 
@@ -341,10 +355,18 @@ def save_metadata(file, annots, segs_per_call):
     df['file_datetime'] = get_datetime_from_filename(file)
     df['site'] = get_site(annots.filename[0])
     
+    file_path = SAVE_PATH.joinpath(Path(file).stem)
+    file_name = f'{file_path}_{df.site[0]}_condensed_' '{part}.wav'
+    
     df_repeated = extend_df(df, segs_per_call)
     df_repeated['lengths'] = sum(segs_per_call)
+
+    df_repeated['cond_file'] = file_name
+    for seg in range(1, int(len(df_repeated)/config['segs_lim'])+2):
+        beg, end = np.array([seg-1, seg])*config['segs_lim']
+        df_repeated.loc[beg:end, 'cond_file'] = file_name.format(part=seg-1)
     
-    return df_repeated, df_repeated['site'].iloc[0]
+    return df_repeated, file_name
 
 def get_datetime_from_filename(file):
     """
@@ -385,9 +407,7 @@ def condense_files_into_only_calls():
                                recursive=True)
     meta_df = pd.DataFrame()
     
-    Path(config['raw_data_path']).mkdir(
-        Path(config['preproc']['annots_path']).stem, exist_ok=True
-        )
+    SAVE_PATH.mkdir(exist_ok=True)
     
     for ind, file in enumerate(list(annotation_files)):
         
@@ -397,10 +417,7 @@ def condense_files_into_only_calls():
         
         meta_df = pd.concat([meta_df, extract_segments(file)])
         
-    
-    meta_df.to_csv(config['raw_data_path']
-                   + f"/{Path(config['preproc']['annots_path']).stem}"
-                   + '/meta_data.csv')
+    meta_df.to_csv(SAVE_PATH.joinpath('meta_data.csv'))
     
 if __name__ == '__main__':
     condense_files_into_only_calls()

@@ -13,8 +13,10 @@ from ievad.helpers import get_datetime_from_filename
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
-
-PATH = path = f"{config['raw_data_path']}/{Path(Path(config['preproc']['annots_path']).stem)}"
+    
+LOAD_PATH = Path(config['raw_data_path']).joinpath(
+            Path(config['preproc']['annots_path']).stem
+            )   
 
 def plot_wo_specs(data, timeLabels, title, centroids, classes):
     fig = px.scatter(data, x='x', y='y', color=timeLabels, opacity = 0.4,
@@ -53,7 +55,7 @@ def build_dash_layout(data, title, timeLabels, location=None):
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
-                                        color = data['file stems'],
+                                        color = data['file stem'],
                                         # symbol = location,
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
@@ -93,7 +95,15 @@ def align_df_and_embeddings(files, meta_df):
     return meta_df.loc[zip(datetimes, sites)]
 
 def get_site_from_filename(file_path):
-    return Path(file_path).stem.split('_')[-2]
+    return Path(file_path).stem.split('_')[-3]
+
+def get_stem_from_pathlib(pathlib_object):
+    return pathlib_object.stem
+
+def get_df_to_corresponding_file_part(files, meta_df):
+    f = lambda p: Path(p).stem
+    meta_df.index = list(map(f, meta_df.cond_file))
+    return meta_df.loc[np.unique(list(map(f, files)))]
 
 def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
                                colormap, files, lengths, 
@@ -102,11 +112,15 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     tup = embed2d.compute_embeddings(audioEmbeddingsList, percentiles)
     embeddings, cen, timeLabels, classes = tup
 
-    divisions_array, files_array = embed2d.create_timeList(lengths, files)
+    divisions_array, files_array = embed2d.create_timeList(lengths, 
+                                list(map(get_stem_from_pathlib, files)))
         
-    meta_df = pd.read_csv(PATH + '/meta_data.csv')
+    meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
     
     meta_df = align_df_and_embeddings(files, meta_df)
+    
+    meta_df = get_df_to_corresponding_file_part(files_array, meta_df)
+    # meta_df = meta_df.iloc[:len(embeddings)]
     
     data = pd.DataFrame({'x' : embeddings[:,0], 
                          'y':  embeddings[:,1],
@@ -116,7 +130,7 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
                         'time within original file' : meta_df['call_time'],
                         'time within condensed file' : divisions_array,
                         'filename' : files_array,
-                        'file stems': meta_df.file_stems})
+                        'file stem': meta_df.file_stem})
 
     app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
     app.layout = build_dash_layout(data, title, 
@@ -130,17 +144,18 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
         Input("play_audio_btn", "n_clicks"),
         Input("radio_autoplay", "value"))
     
-    def fig_click(clickData, play_btn, autoplay_rad):
+    def fig_click(clickData, play_btn, autoplay_radio):
         if not clickData:
-            return px.imshow(dummy_image(), height = 900), "file: ..."
+            return (px.imshow(dummy_image(), height = config['umap_height']),
+                    "file: ...")
         
         else:
             time_in_file = clickData['points'][0]['customdata'][-2]
             file_path = clickData['points'][0]['customdata'][-1]
             
             audio, sr, file_stem = load_audio(time_in_file, file_path)
-            spec = create_specs(audio, file_path)
-            if autoplay_rad == "Autoplay on":
+            spec = create_specs(audio)
+            if autoplay_radio == "Autoplay on":
                 play_audio(audio, sr)
             
         if "play_audio_btn" == dash.ctx.triggered_id:
@@ -156,50 +171,56 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     
     app.run_server(debug = False)
     
-def play_audio(audio, sr):
-    smoothing = np.cos(np.linspace(0,np.pi/2,500))
-    test = [*[0]*500, 
-            *audio[500:1000]*30*smoothing[::-1], 
-            *audio[1000:-5000]*30, 
-            *audio[-3500:-1000]*30*np.cos(np.linspace(0,np.pi/2,2500)), 
+def smoothing_func(num_samps, func='sin'):
+    return getattr(np, func)(np.linspace(0, np.pi/2, num_samps))
+
+def fade_audio(audio):
+    return [*[0]*500, 
+            *audio[500:1000]*config['amp']*smoothing_func(500),
+            *audio[1000:-5000]*config['amp'], 
+            *audio[-3500:-1000]*config['amp']*smoothing_func(2500, func='cos'),
             *[0]*1000]
-    sd.play(test, sr)
-    # sd.play(audio, sr)
+    
+def play_audio(audio, sr):
+    sd.play(fade_audio(audio), sr)
     
 def time_string_to_float(t):
-    minu = int(t.split(':')[0])*60
+    min = int(t.split(':')[0])*60
     sec = int(t.split(':')[1].split('.')[0])
     ms = int(t.split('.')[-1][:-1])/100
-    return minu+sec+ms
+    return min+sec+ms
     
 def load_audio(t_s, file):
-    file_stem = Path(file).stem
-    main_path = Path(PATH)
-
+    file_stem = file#Path(file).stem
+    main_path = Path(LOAD_PATH)
     t_f = time_string_to_float(t_s)
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
-                        sr=16000, offset=t_f, duration = 0.96)
+                        offset=t_f, 
+                        sr=config['preproc']['model_sr'], 
+                        duration = config['preproc']['model_time_length'])
     return audio, sr, file_stem
  
-def create_specs(audio, t):
- 
-    S = np.abs(lb.stft(audio, win_length = 512))
-
-    S_dB = lb.amplitude_to_db(S, ref=np.max)
-
+def set_axis_lims_dep_sr(S_dB):
     if config['preproc']['downsample']:
         f_max = config['preproc']['downsample_sr'] / 2
         reduce = config['preproc']['model_sr'] / (f_max * 2)
         S_dB = S_dB[:int(S_dB.shape[0] / reduce), :]
     else:
-        f_max = config['preproc']['model_sr'] / 2
+        f_max = config['preproc']['model_sr'] / 2 
+    return f_max, S_dB
+
+def create_specs(audio):
+    S = np.abs(lb.stft(audio, win_length = config['spec_win_len']))
+    S_dB = lb.amplitude_to_db(S, ref=np.max)
+    f_max, S_dB = set_axis_lims_dep_sr(S_dB)
 
     fig = px.imshow(S_dB, origin='lower', 
                     aspect = 'auto',
-                    y = np.linspace(50, f_max, S_dB.shape[0]),
-                    x = np.linspace(0, 0.96, S_dB.shape[1]),
+                    y = np.linspace(config['f_min'], f_max, S_dB.shape[0]),
+                    x = np.linspace(0, config['preproc']['model_time_length'], 
+                                    S_dB.shape[1]),
                     labels = {'x' : 'time in s', 
                             'y' : 'frequency in Hz'},
-                    height = 800)
+                    height = config['spec_height'])
     return fig

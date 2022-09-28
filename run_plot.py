@@ -1,7 +1,7 @@
 from ievad.embed2d import get_embeddings
 from ievad.plot import plotUMAP_Continuous_plotly
 
-acc_embeddings, folders, file_list, lenghts = get_embeddings()
+acc_embeddings, folders, file_list, lenghts = get_embeddings(limit=1)
 percentiles = 24
 plotUMAP_Continuous_plotly(acc_embeddings, percentiles, 'plasma', 
                            file_list, lenghts)
