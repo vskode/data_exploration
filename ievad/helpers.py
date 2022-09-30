@@ -1,3 +1,4 @@
+import re
 import glob
 import yaml
 import numpy as np
@@ -126,8 +127,18 @@ def load_audio(annots):
                         duration = annots.end.values[-1] - annots.start[0])
     
     if config['preproc']['downsample']:
-        audio = lb.resample(audio, orig_sr = sr, 
-                            target_sr = config['preproc']['model_sr'])
+        thresh = config['preproc']['resamp_size']
+        audios = []
+        
+        for i in range(0, len(audio), thresh):
+            audios.append(lb.resample(audio[i:i+thresh], orig_sr = sr, 
+                                target_sr = config['preproc']['model_sr']))
+            
+        for ind, audio_seg in enumerate(audios):
+            if ind == 0:
+                audio = audio_seg
+            else:
+                audio = np.append(audio, audio_seg)
     
     return audio
 
@@ -354,6 +365,8 @@ def append_metadata(file, annots, segs_per_call):
     df['file_stem'] = Path(file).stem.split('.Table')[0]
     df['file_datetime'] = get_datetime_from_filename(file)
     df['site'] = get_site(annots.filename[0])
+    if 'Prediction value' in annots.columns:
+        df['preds'] = annots['Prediction value'] 
     
     file_path = SAVE_PATH.joinpath(Path(file).stem)
     file_name = f'{file_path}_{df.site[0]}_condensed_' '{part}.wav'
@@ -378,21 +391,41 @@ def get_datetime_from_filename(file):
     Returns:
         dt.Datetime: datetime object of time data within file name 
     """
-    if Path(file).stem[0] == 'P':
-        string = Path(file).stem
-        file_date = pd.to_datetime(string.split('.Table')[0], 
-                            format='PAM_%Y%m%d_%H%M%S_000')
-    elif Path(file).stem[0] == 'c':
-        string = Path(file).stem.split('A_')[1]
-        file_date = pd.to_datetime(string.split('.Table')[0],
-                                    format='%Y-%m-%d_%H-%M-%S')
-    elif '.Table' in Path(file).stem:
-        string = Path(file).stem.split('.')[1]
-        file_date = pd.to_datetime(string.split('.Table')[0], 
-                                    format='%y%m%d%H%M%S')
-    else:
-        string = Path(file).stem.replace('NRS08_','').split('_annot')[0]
-        file_date = pd.to_datetime(string, format='%Y%m%d_%H%M%S')
+    
+    stem = Path(file).stem
+    for split_str in ['_annot', '.Table']:
+        stem = stem.split(split_str)[0]
+        
+    numbs = re.findall('[0-9]+', stem)
+    numbs = [n for n in numbs if len(n)%2 == 0]
+    
+    i, datetime = 1, ''
+    while len(datetime)<12:
+        datetime = ''.join(numbs[-i:])
+        i += 1
+        
+    if not config['dt_format_std']:
+        file_date = pd.to_datetime(datetime, format=config['dt_format'])
+    elif len(datetime) == 12:
+        file_date = pd.to_datetime(datetime, format='%y%m%d%H%M%S')
+    elif len(datetime) == 14:
+        file_date = pd.to_datetime(datetime, format='%Y%m%d%H%M%S')
+    
+    # if Path(file).stem[0] == 'P':
+    #     string = Path(file).stem
+    #     file_date = pd.to_datetime(string.split('.Table')[0], 
+    #                         format='PAM_%Y%m%d_%H%M%S_000')
+    # elif Path(file).stem[0] == 'c':
+    #     string = Path(file).stem.split('A_')[1]
+    #     file_date = pd.to_datetime(string.split('.Table')[0],
+    #                                 format='%Y-%m-%d_%H-%M-%S')
+    # elif '.Table' in Path(file).stem:
+    #     string = Path(file).stem.split('.')[1]
+    #     file_date = pd.to_datetime(string.split('.Table')[0], 
+    #                                 format='%y%m%d%H%M%S')
+    # else:
+    #     string = Path(file).stem.replace('NRS08_','').split('_annot')[0]
+    #     file_date = pd.to_datetime(string, format='%Y%m%d_%H%M%S')
     return file_date
     
 def condense_files_into_only_calls():

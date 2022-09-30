@@ -55,8 +55,8 @@ def build_dash_layout(data, title, timeLabels, location=None):
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
-                                        color = data['file stem'],
-                                        # symbol = location,
+                                        color = data['preds'],
+                                        symbol = data['file stem'],
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
                                         hover_data = hoverdata,
@@ -92,7 +92,7 @@ def align_df_and_embeddings(files, meta_df):
     datetimes = map(get_datetime_from_filename, files)
     sites = map(get_site_from_filename, files)
 
-    return meta_df.loc[zip(datetimes, sites)]
+    return meta_df.loc[zip(datetimes, sites)].drop_duplicates()
 
 def get_site_from_filename(file_path):
     return Path(file_path).stem.split('_')[-3]
@@ -120,10 +120,10 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     meta_df = align_df_and_embeddings(files, meta_df)
     
     meta_df = get_df_to_corresponding_file_part(files_array, meta_df)
-    # meta_df = meta_df.iloc[:len(embeddings)]
     
     data = pd.DataFrame({'x' : embeddings[:,0], 
                          'y':  embeddings[:,1],
+                         'preds': meta_df['preds'],
                         'location': meta_df['site'],
                 'file date': meta_df['file_datetime'][0].split(' ')[0],
                 'file time': meta_df['file_datetime'][0].split(' ')[1],
