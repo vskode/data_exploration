@@ -3,6 +3,8 @@ import yaml
 import numpy as np
 import pandas as pd
 import librosa as lb
+import re
+import datetime as dt
 from . import embed2d
 import sounddevice as sd
 from pathlib import Path
@@ -10,6 +12,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output
 from ievad.helpers import get_datetime_from_filename
+from ievad.vggish import vggish_params
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
@@ -17,6 +20,8 @@ with open('ievad/config.yaml', 'rb') as f:
 LOAD_PATH = Path(config['raw_data_path']).joinpath(
             Path(config['preproc']['annots_path']).stem
             )   
+if not LOAD_PATH.exists():
+    LOAD_PATH = LOAD_PATH.parent
 
 def plot_wo_specs(data, timeLabels, title, centroids, classes):
     fig = px.scatter(data, x='x', y='y', color=timeLabels, opacity = 0.4,
@@ -38,15 +43,20 @@ def dummy_image():
                 [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
                 ], dtype=np.uint8)
     
-def build_dash_layout(data, title, timeLabels, location=None):
+def build_dash_layout(data, title, file_date=None, 
+                      file_time=None, location=False,
+                      orig_file_time=False):
+    data = pd.DataFrame(data)
     symbols = ['square', 'circle-dot', 'circle', 'circle-open']
-    hoverdata = {
-                'file date': False,
-                'file time': True,
-                'location': True,
-                'time within original file': True, 
-                'time within condensed file': True, 
-                'filename': True}
+    # TODO clean this up! - keys should only be hard coded once
+    # hoverdata = {
+    #             'file_date': file_date,
+    #             'file_time': file_time,
+    #             'site': location,
+    #             'time_in_orig_file': orig_file_time, 
+    #             'time_in_condensed_file': True, 
+    #             'filename': True}
+    hoverdata = {key: True for key in data.columns}
     
     return dash.html.Div(
         [
@@ -55,12 +65,12 @@ def build_dash_layout(data, title, timeLabels, location=None):
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
-                                        color = data['preds'],
-                                        symbol = data['file stem'],
+                                        color = data['file_stem'],
+                                        symbol = data['file_date'],
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
                                         hover_data = hoverdata,
-                                        hover_name = data['file date'],
+                                        hover_name = data['file_date'],
                                         height = 900
                                         ),
                             )
@@ -105,6 +115,21 @@ def get_df_to_corresponding_file_part(files, meta_df):
     meta_df.index = list(map(f, meta_df.cond_file))
     return meta_df.loc[np.unique(list(map(f, files)))]
 
+def get_dt_strings_from_filename(f):
+    nums = ''.join(re.findall('[0-9]+', f))
+    if len(nums) > 14:
+        f = f.split('_')[-1]
+        nums = ''.join(re.findall('[0-9]+', f))
+        
+    if len(nums) == 14:
+        dtime = dt.datetime.strptime(''.join(re.findall('[0-9]+', f)), 
+                             config['dt_format'])
+    elif len(nums) == 12:
+        dtime = dt.datetime.strptime(''.join(re.findall('[0-9]+', f)), 
+                             config['dt_format'].replace('Y', 'y'))
+    dt_string = dtime.strftime('%Y-%m-%d %H:%M:%S')
+    return dt_string.split(' ')
+
 def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles, 
                                colormap, files, lengths, 
                                title = config['title'] ):
@@ -115,27 +140,48 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
     divisions_array, files_array = embed2d.create_timeList(lengths, 
                                 list(map(get_stem_from_pathlib, files)))
         
-    meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
+        
+    data = dict()
+    if LOAD_PATH.joinpath('meta_data.csv').exists():
+        meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
+        meta_df = align_df_and_embeddings(files, meta_df)
+        meta_df = get_df_to_corresponding_file_part(files_array, meta_df)
+        
+        for key in ['preds', 'site', 'file_stem', 'time_in_orig_file']:
+            if key in meta_df.keys(): 
+                data.update({key: meta_df[key].values})
+        if 'file_datetime' in meta_df:
+            data.update({
+                'file_date': meta_df['file_datetime'][0].split(' ')[0],
+                'file_time': meta_df['file_datetime'][0].split(' ')[1]
+            })
+        n = len(meta_df)
+    else:
+        try:
+            dtimes = list(map(get_dt_strings_from_filename, files_array))
+            dates, times = [[d[0] for d in dtimes], [t[1] for t in dtimes]]
+        except Exception as e:
+            print('time format not found in file name', e)
+            dates, times = [0]*len(embeddings), [0]*len(embeddings)
+        data.update({'file_date': dates, 
+                     'file_time': times,
+                     'file_stem': files_array,
+                     'site': list(map(lambda s: s.split('_')[0], files_array))})
+        n = len(embeddings)
     
-    meta_df = align_df_and_embeddings(files, meta_df)
-    
-    meta_df = get_df_to_corresponding_file_part(files_array, meta_df)
-    
-    data = pd.DataFrame({'x' : embeddings[:,0], 
-                         'y':  embeddings[:,1],
-                         'preds': meta_df['preds'],
-                        'location': meta_df['site'],
-                'file date': meta_df['file_datetime'][0].split(' ')[0],
-                'file time': meta_df['file_datetime'][0].split(' ')[1],
-                        'time within original file' : meta_df['call_time'],
-                        'time within condensed file' : divisions_array,
-                        'filename' : files_array,
-                        'file stem': meta_df.file_stem})
+    data.update({'x' : embeddings[:,0][:n],
+                 'y':  embeddings[:,1][:n],
+                 'time_in_condensed_file' : divisions_array[:n],
+                 'filename' : files_array[:n]})
+    if 'time_in_orig_file' in data.keys():
+        orig_file_time = True
+    else:
+        orig_file_time = False
 
     app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
-    app.layout = build_dash_layout(data, title, 
-                                   meta_df['file_datetime'].values, 
-                                   meta_df['site'].values)
+    app.layout = build_dash_layout(data, title, file_date=True, 
+                                   file_time=True, 
+                                   orig_file_time=orig_file_time)
 
     @app.callback(
         Output("table_container", "figure"),
@@ -165,7 +211,7 @@ def plotUMAP_Continuous_plotly(audioEmbeddingsList, percentiles,
                              dash.html.Br(),
                             f"time in file: {time_in_file}",
                              dash.html.Br(),
-                            f"location: {file_stem.split('_')[-2]}"])
+                            f"location: {file_stem.split('_')[-1]}"])
             
         return spec, title
     
@@ -175,11 +221,14 @@ def smoothing_func(num_samps, func='sin'):
     return getattr(np, func)(np.linspace(0, np.pi/2, num_samps))
 
 def fade_audio(audio):
-    return [*[0]*500, 
-            *audio[500:1000]*config['amp']*smoothing_func(500),
-            *audio[1000:-5000]*config['amp'], 
-            *audio[-3500:-1000]*config['amp']*smoothing_func(2500, func='cos'),
-            *[0]*1000]
+    perc_aud = np.linspace(0, len(audio), 100).astype(int)
+    return [*[0]*perc_aud[3], 
+            *audio[perc_aud[3]:perc_aud[7]]*config['amp']
+                *smoothing_func(perc_aud[7]-perc_aud[3]),
+            *audio[perc_aud[7]:perc_aud[70]]*config['amp'], 
+            *audio[perc_aud[70]:perc_aud[93]]*config['amp']
+                *smoothing_func(perc_aud[93]-perc_aud[70], func='cos'),
+            *[0]*(perc_aud[-1]-perc_aud[93])]
     
 def play_audio(audio, sr):
     sd.play(fade_audio(audio), sr)
@@ -197,8 +246,8 @@ def load_audio(t_s, file):
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
                         offset=t_f, 
-                        sr=config['preproc']['model_sr'], 
-                        duration = config['preproc']['model_time_length'])
+                        sr=vggish_params.SAMPLE_RATE, 
+                        duration = vggish_params.EXAMPLE_WINDOW_SECONDS)
     return audio, sr, file_stem
  
 def set_axis_lims_dep_sr(S_dB):
@@ -214,11 +263,19 @@ def create_specs(audio):
     S = np.abs(lb.stft(audio, win_length = config['spec_win_len']))
     S_dB = lb.amplitude_to_db(S, ref=np.max)
     f_max, S_dB = set_axis_lims_dep_sr(S_dB)
+    
+    if config['preproc']['downsample']:
+        f_max = config['preproc']['downsample_sr']
+    else:
+        f_max = vggish_params.MEL_MAX_HZ
 
     fig = px.imshow(S_dB, origin='lower', 
                     aspect = 'auto',
-                    y = np.linspace(config['f_min'], f_max, S_dB.shape[0]),
-                    x = np.linspace(0, config['preproc']['model_time_length'], 
+                    y = np.linspace(vggish_params.MEL_MIN_HZ, 
+                                    f_max, 
+                                    S_dB.shape[0]),
+                    x = np.linspace(0, 
+                                    vggish_params.EXAMPLE_WINDOW_SECONDS, 
                                     S_dB.shape[1]),
                     labels = {'x' : 'time in s', 
                             'y' : 'frequency in Hz'},

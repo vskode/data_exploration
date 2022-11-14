@@ -10,10 +10,13 @@ from ievad.vggish import vggish_params
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
+    
 
 SAVE_PATH = Path(config['raw_data_path']).joinpath(
             Path(config['preproc']['annots_path']).stem
             )
+if not SAVE_PATH.exists():
+    SAVE_PATH = SAVE_PATH.parent
 
 def get_corresponding_sound_file(file):
     """
@@ -166,7 +169,7 @@ def get_number_of_segs_per_call(annots):
         np.array: number of audio segments per annotation
     """
     num_of_segs_per_call = np.round( ((annots.end - annots.start)/ 
-                                    config['preproc']['model_time_length'] ),
+                                    vggish_params.EXAMPLE_WINDOW_SECONDS ),
                                     0).astype(int)
     num_of_segs_per_call[num_of_segs_per_call == 0] = 1
     return num_of_segs_per_call
@@ -187,7 +190,7 @@ def extract_segments(file):
         pd.DataFrame: metadata of recordings
     """
     call_len = (config['preproc']['model_sr']
-                *config['preproc']['model_time_length'])
+                *vggish_params.EXAMPLE_WINDOW_SECONDS)
     n = int(config['segs_lim']*call_len)
     win_length = int(vggish_params.SAMPLE_RATE
                   * vggish_params.STFT_WINDOW_LENGTH_SECONDS)
@@ -291,7 +294,7 @@ def init_call_array(num_of_segs_per_call):
         np.array: numpy matrix to be filled with audio segment
     """
     return np.zeros([num_of_segs_per_call.sum() + 1, 
-                    int(config['preproc']['model_time_length']
+                    int(vggish_params.EXAMPLE_WINDOW_SECONDS
                         * config['preproc']['model_sr'])])
 
 def get_segment_indices(annots, row, seg_num):
@@ -308,11 +311,11 @@ def get_segment_indices(annots, row, seg_num):
     """
     beg = int((row.start
                 - annots.start.values[0]
-                + config['preproc']['model_time_length']
+                + vggish_params.EXAMPLE_WINDOW_SECONDS
                 * seg_num) 
               * config['preproc']['model_sr'])
     
-    end = int(beg + config['preproc']['model_time_length']
+    end = int(beg + vggish_params.EXAMPLE_WINDOW_SECONDS
               * config['preproc']['model_sr'])
     return beg, end
 
@@ -360,7 +363,7 @@ def append_metadata(file, annots, segs_per_call):
     """
     df = pd.DataFrame()
     
-    df['call_time'] = list(map(string_to_time, annots.start))
+    df['time_in_orig_file'] = list(map(string_to_time, annots.start))
     df['file'] = annots.filename
     df['file_stem'] = Path(file).stem.split('.Table')[0]
     df['file_datetime'] = get_datetime_from_filename(file)

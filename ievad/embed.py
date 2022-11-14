@@ -62,6 +62,8 @@ with open('ievad/config.yaml', "r") as f:
 LOAD_PATH = Path(config['raw_data_path']).joinpath(
             Path(config['preproc']['annots_path']).stem
             )    
+if not LOAD_PATH.exists():
+    LOAD_PATH = LOAD_PATH.parent
 
 def main():
 	"""

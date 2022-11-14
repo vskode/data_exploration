@@ -26,7 +26,7 @@ try:
   import librosa as lb
 
   def wav_read(wav_file):
-    wav_data, sr = lb.load(wav_file, sr = 16000)#, dtype='int16')
+    wav_data, sr = lb.load(wav_file, sr = vggish_params.SAMPLE_RATE)#, dtype='int16')
     wav_data = (wav_data * 32767).astype(np.int16)
     return wav_data, sr
 

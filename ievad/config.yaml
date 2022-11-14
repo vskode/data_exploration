@@ -4,8 +4,9 @@
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-raw_data_path :       "ievad/files/raw"
-# fixed path, embeddings will be stored here, do not change
+raw_data_path :       "ievad/files/raw/wo_annots"
+
+# fixed path, embeddings will be stored here, DO NOT CHANGE
 pickled_data_path :   "ievad/files/embeds"
 
 # length limitation for condensed file
@@ -14,14 +15,14 @@ segs_lim:             1500
 # PLOTTING:
 # heading for main interactive plot
 title :               "UMAP Embedding"
-spec_win_len:         512
+spec_win_len:         1024
 umap_height:          900
 spec_height:          800
 f_min:                50
 
 # PLAYBACK:
 # amplify audio to make audible
-amp:                  30
+amp:                  5
 
 # MODEL:
 # relevant files for the model
@@ -34,24 +35,26 @@ preds_column:         'Prediction value'
 
 # CONDENSER:
 dt_format_std:        False
-dt_format:            '%d%m%y%H%M%S'
+dt_format:            '%Y%m%d%H%M%S'
 
 ## HELPER VARS ##
 # preprocessing configurations
 preproc:
   # main parent directory containing all annotation files
-  # annots_path:        '/home/vincent/Code/MA/Daten/Catherine_annotations'
-  annots_path:        '/home/vincent/Code/MA/generated_annotations/for_umap'
+  annots_path:        'ievad/files/raw/annots'
+  # annots_path:        '/home/vincent/Code/MA/generated_annotations/for_umap'
   # main parent directory containing all sound files
-  sound_files_path:   '/media/vincent/Extreme SSD/MA'
+  sound_files_path:   'ievad/files/raw/uncondensed'
   # sound_files_path:   '/media/vincent/Expansion/NOAA/NRS08_20162018_new20220711'
   # set to lowest sample rate in your dataset, to ensure comparability
   downsample_sr:      2000
   resamp_size:        10000000
   # if you don't want to downsample the data to a common sample rate, set to 'False'
-  downsample:         True
+  downsample:         False
 
   ## Fixed model parameters, do not change
+  # model_sr:           4000
+  # model_time_length:  2
   model_sr:           16000
   model_time_length:  0.96
 

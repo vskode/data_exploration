@@ -18,8 +18,14 @@ with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 LOAD_PATH = Path(config['pickled_data_path']).joinpath(
-            Path(config['preproc']['annots_path']).stem
+            Path(config['raw_data_path']).stem
             )   
+
+if not LOAD_PATH.exists():
+    LOAD_PATH.parent.joinpath(Path(config['preproc']['annots_path']).stem)
+       
+    if not LOAD_PATH.exists():
+        LOAD_PATH = LOAD_PATH.parent
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 10)
