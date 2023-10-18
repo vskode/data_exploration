@@ -79,7 +79,7 @@ def main():
 	wavs = []
 
 	for file in directory.iterdir():
-		if not file.suffix in ['.WAV', '.wav']:
+		if not file.suffix in ['.WAV', '.wav', '.aif']:
 			continue
 		print('embedding file: ', file.stem)
 
