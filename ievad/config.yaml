@@ -4,7 +4,7 @@
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-raw_data_path :       "ievad/files/raw/presi"
+raw_data_path :       "ievad/files/raw/humpbacks"
 
 # fixed path, embeddings will be stored here, DO NOT CHANGE
 pickled_data_path :   "ievad/files/embeds"

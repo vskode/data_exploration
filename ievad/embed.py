@@ -75,7 +75,7 @@ def main():
 	"""
 	directory = LOAD_PATH
 	destination = Path(config['pickled_data_path']).joinpath(LOAD_PATH.stem)
-	destination.mkdir(exist_ok=True)
+	destination.mkdir(exist_ok=True, parents=True)
 	wavs = []
 
 	for file in directory.iterdir():
