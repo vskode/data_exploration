@@ -3,18 +3,42 @@
 
 ievad uses plotly's dash library to provide an interactive visualization for your acoustic dataset.
 
-To use the app:
-- create an environment and pip install the requirements.txt file
-- download the model checkpoint, from [here](https://storage.googleapis.com/audioset/vggish_model.ckpt) and place it into the ievad/vggish folder (don't change its name)
-- edit the ievad/config.yaml file to insert the paths to your files
-- to condense sound files based on corresponding annotation files, run the run_file_condenser.py script
-- run the run_embed.py script to generate embeddings from the files specified in the ievad/config.yaml file path
-- once finished, run the run_plot.py file to start the browser app
-    - note that depending on the number and size of files you include both run_embed.py and run_plot.py might take a while
-
 <!-- ![example of visualization](docs/imgs/example.png) -->
 ![example of visualization](docs/imgs/example.gif)
 
 UMAP code provided by [@avery-b](https://github.com/avery-b)
 
-Production is still in early stage, ease of use will hopefully increase in the next months.
+Best performance of this code is achieved using python version 3.10
+
+## Installation
+
+- clone repository
+
+`git clone https://github.com/vskode/ievad.git`
+- create environmen (on windows replace python3.10 with path to python 3.10)
+- this step might require installation of virtualenv
+
+`python3.10 -m virtualenv env_ievad`
+- activate environment
+
+`source env_ievad/bin/activate`
+- install depedenciew
+
+`pip install -r requirements.txt`
+- download the model checkpoint, from [here](https://storage.googleapis.com/audioset/vggish_model.ckpt)
+- move model checkpoints from downloads to ./ievad/vggish (see download link above, either manually or using the following code)
+
+`mv ~/Downloads/vggish_model.ckpt ievad/vggish`
+- run program
+
+`python run_pipeline.py`
+
+## Usage
+
+Inside the `ievad/files/raw` directory is where you can put sound files ending in `.wav` or `.aif` and they will then be used for the creation of the embeddings and the visualization of them.
+
+Embeddings can also be computed without visualizing them using `python run_embed.py`.
+
+Once Embeddings have been created you can just run `python run_plot.py` to prevent the embeddings from being calculated again.
+
+Edit the ievad/config.yaml file to change the paths to your needs.
