@@ -12,7 +12,7 @@ with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 
-SAVE_PATH = Path(config['raw_data_path']).joinpath(
+SAVE_PATH = Path(config['audio_dir']).joinpath(
             Path(config['preproc']['annots_path']).stem
             )
 if not SAVE_PATH.exists():

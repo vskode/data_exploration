@@ -4,3 +4,4 @@ ievad/files/embeds/*
 inemviz/vggish/training*
 vggish_model.ckpt
 test*
+env_*

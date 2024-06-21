@@ -1,4 +1,4 @@
-from ievad.embed2d import get_embeddings
+from ievad.umap_embed import get_embeddings
 from ievad.plot import plotUMAP_Continuous_plotly
 
 acc_embeddings, folders, file_list, lenghts = get_embeddings(limit=6)

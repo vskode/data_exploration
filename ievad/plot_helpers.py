@@ -1,14 +1,15 @@
 
-import re
 import yaml
 import numpy as np
 import pandas as pd
 import librosa as lb
+import re
 import datetime as dt
 import sounddevice as sd
 from pathlib import Path
 
 from ievad.helpers import get_datetime_from_filename
+
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
@@ -37,9 +38,6 @@ def align_df_and_embeddings(files, meta_df):
 
 def get_site_from_filename(file_path):
     return Path(file_path).stem.split('_')[-3]
-
-def get_stem_from_pathlib(pathlib_object):
-    return pathlib_object.stem
 
 def get_df_to_corresponding_file_part(files, meta_df):
     f = lambda p: Path(p).stem

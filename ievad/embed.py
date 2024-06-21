@@ -46,7 +46,7 @@ Usage:
 
 from __future__ import print_function
 
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import pickle
 from pathlib import Path
 from ievad.vggish import vggish_input
