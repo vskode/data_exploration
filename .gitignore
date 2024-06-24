@@ -1,5 +1,8 @@
 *__pycache__*
 ievad/files/embeds/*
+ievad/files/umap_embeds/*
+ievad/files/models/*
+ievad/files/raw/*
 # files/raw/*
 inemviz/vggish/training*
 vggish_model.ckpt
