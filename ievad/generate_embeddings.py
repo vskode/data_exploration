@@ -17,11 +17,12 @@ class Loader():
         
         self.check_exists = ignore_check_if_combination_exists
         if not self.embeds_already_exist():
-            if not self.model_name is 'umap':
+            if self.model_name != 'umap':
                 self._get_audio_paths()
+                self._init_metadata_dict()
             else:
+                self.umap_parent_dir = 'umap_embeds'
                 self.get_embeddings()
-            self._init_metadata_dict()
         
     def embeds_already_exist(self):
         self.combination_already_exists = False
@@ -55,15 +56,26 @@ class Loader():
         self.folder = self.get_embedding_dir()
         self.files = [f for f in self.folder.iterdir() 
                       if f.suffix == '.pickle']
-        
-        with open(self.folder.joinpath('metadata.yml'), "r") as f:
-            self.metadata =  yaml.safe_load(f)
+        try:
+            with open(self.folder.joinpath('metadata.yml'), "r") as f:
+                self.metadata_dict =  yaml.safe_load(f)
+            self.embed_dir = (self.embed_parent_dir
+                              .parent
+                              .joinpath(self.umap_parent_dir)
+                              .joinpath(self.get_timestamp_dir()
+                                        + f'-{self.embedding_model}'))
+            self.embed_dir.mkdir()
+        except Exception as e:
+            print('Directory does not contain metadata file.')
 
     def get_embedding_dir(self):
+        self.embed_parent_dir = Path(self.embed_parent_dir)
+        self.audio_dir = Path(self.audio_dir)
+        
         embed_dirs = [d for d in self.embed_parent_dir.iterdir()
                     if self.audio_dir.stem in d.stem and 
-                    self.model_name in d.stem]
-        # TODO fix paths so the the metadata file is loaded here
+                    self.embedding_model in d.stem]
+        
         most_recent_emdbed_dir = embed_dirs[0]
         return most_recent_emdbed_dir
     
@@ -77,18 +89,20 @@ class Loader():
         # if not self.load_path.exists():
         #     self.load_path = self.load_path.parent
         
-    def _get_audio_paths(self):
-        self.audio_dir = Path(self.audio_dir)
-
-        top_level_dir = time.strftime('%Y-%m-%d_%H-%M___'
+    def get_timestamp_dir(self):
+        return time.strftime('%Y-%m-%d_%H-%M___'
                                       + self.model_name
                                       + '-'
                                       + self.audio_dir.stem,
                                       time.localtime())
+        
+    def _get_audio_paths(self):
+        self.audio_dir = Path(self.audio_dir)
+
         self.files = self.audio_dir.iterdir()
         
         self.embed_dir = (Path(self.embed_parent_dir)
-                          .joinpath(top_level_dir))
+                          .joinpath(self.get_timestamp_dir()))
         self.embed_dir.mkdir(exist_ok=True, parents=True)
         
     def embed_read(self, file):
@@ -129,9 +143,13 @@ class Embedder():
         self.model = getattr(self, 
                              f'get_callable_{self.model_name}_model')(**kwargs)
         
-    def get_callable_umap_model(self, **kwargs):
+    def get_callable_umap_model(self, n_neighbors=15, 
+                                n_components=2, metric='euclidean', 
+                                **kwargs):
         import umap
-        return umap.UMAP(**kwargs).fit_transform
+        return umap.UMAP(n_neighbors=n_neighbors,
+                         n_components=n_components,
+                         metric=metric).fit_transform
 
 
     def get_callable_vggish_model(self, **kwargs):
