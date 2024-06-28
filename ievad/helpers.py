@@ -6,11 +6,17 @@ import pandas as pd
 import librosa as lb
 import soundfile as sf
 from pathlib import Path
-from ievad.vggish import vggish_params
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
-    
+
+config_preproc = config['preproc']
+time_in_samps = int(config_preproc["model_sr"] * config_preproc["model_time_length"])
+CORRECTED_CONTEXT_WIN_TIME =  (
+    (time_in_samps - 1024) - np.mod((time_in_samps - 1024), 95) + 1024
+) / config_preproc["model_sr"]
+MEL_MIN_HZ = config["model_sr"] / 40
+MEL_MAX_HZ = config["model_sr"] / 2
 
 SAVE_PATH = Path(config['audio_dir']).joinpath(
             Path(config['preproc']['annots_path']).stem
@@ -169,7 +175,7 @@ def get_number_of_segs_per_call(annots):
         np.array: number of audio segments per annotation
     """
     num_of_segs_per_call = np.round( ((annots.end - annots.start)/ 
-                                    vggish_params.EXAMPLE_WINDOW_SECONDS ),
+                                    CORRECTED_CONTEXT_WIN_TIME ),
                                     0).astype(int)
     num_of_segs_per_call[num_of_segs_per_call == 0] = 1
     return num_of_segs_per_call
@@ -190,10 +196,10 @@ def extract_segments(file):
         pd.DataFrame: metadata of recordings
     """
     call_len = (config['preproc']['model_sr']
-                *vggish_params.EXAMPLE_WINDOW_SECONDS)
+                *CORRECTED_CONTEXT_WIN_TIME)
     n = int(config['segs_lim']*call_len)
-    win_length = int(vggish_params.SAMPLE_RATE
-                  * vggish_params.STFT_WINDOW_LENGTH_SECONDS)
+    win_length = int(config_preproc['model_sr']
+                  * 1024 / config_preproc["model_sr"])
     
     annots = standardize_annotations(file)
     
@@ -294,7 +300,7 @@ def init_call_array(num_of_segs_per_call):
         np.array: numpy matrix to be filled with audio segment
     """
     return np.zeros([num_of_segs_per_call.sum() + 1, 
-                    int(vggish_params.EXAMPLE_WINDOW_SECONDS
+                    int(CORRECTED_CONTEXT_WIN_TIME
                         * config['preproc']['model_sr'])])
 
 def get_segment_indices(annots, row, seg_num):
@@ -311,11 +317,11 @@ def get_segment_indices(annots, row, seg_num):
     """
     beg = int((row.start
                 - annots.start.values[0]
-                + vggish_params.EXAMPLE_WINDOW_SECONDS
+                + CORRECTED_CONTEXT_WIN_TIME
                 * seg_num) 
               * config['preproc']['model_sr'])
     
-    end = int(beg + vggish_params.EXAMPLE_WINDOW_SECONDS
+    end = int(beg + CORRECTED_CONTEXT_WIN_TIME
               * config['preproc']['model_sr'])
     return beg, end
 

@@ -2,23 +2,25 @@ import yaml
 import pickle
 import numpy as np
 from pathlib import Path
+from ievad.generate_embeddings import generate_embeddings, Loader
  
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 
 def get_embeddings(limit = None):
-    acc_embeddings, file_list, lengths = [], [], []
-    files = np.sort(files).astype(list)[:limit]
+    generate_embeddings(model_name=config['embedding_model'], 
+                        ignore_check_if_combination_exists=False)
+    generate_embeddings(model_name='umap', 
+                        ignore_check_if_combination_exists=False)
+
+    ld = Loader(model_name='umap', 
+                ignore_check_if_combination_exists=False)
+    embeds = []
+    for file in ld.files:
+        embeds.append(ld.load(file))
     
-    for file in files:
-        with open(file, 'rb') as loadf:
-            audioEmbeddings = pickle.load(loadf)
-            acc_embeddings = [*acc_embeddings, *audioEmbeddings]
-            lengths.append(len(audioEmbeddings))
-            file_list.append(file)
-    
-    return acc_embeddings, file_list, lengths
+    # return acc_embeddings, file_list, lengths
 
 def create_timeList(lengths, files):
     lin_array = np.arange(0, max(lengths), 0.96)

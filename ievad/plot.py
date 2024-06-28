@@ -8,7 +8,8 @@ import datetime as dt
 import sounddevice as sd
 from pathlib import Path
 
-from ievad.helpers import get_datetime_from_filename
+from ievad.helpers import (get_datetime_from_filename,
+                           CORRECTED_CONTEXT_WIN_TIME)
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
@@ -90,8 +91,8 @@ def load_audio(t_s, file):
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
                         offset=t_f, 
-                        sr=vggish_params.SAMPLE_RATE, 
-                        duration = vggish_params.EXAMPLE_WINDOW_SECONDS)
+                        sr=config['preproc']['model_sr'], 
+                        duration = CORRECTED_CONTEXT_WIN_TIME)
     return audio, sr, file_stem
  
 def set_axis_lims_dep_sr(S_dB):

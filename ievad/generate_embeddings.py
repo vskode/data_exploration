@@ -81,13 +81,6 @@ class Loader():
     
     def get_annotations(self):
         pass
-        # self.load_path = (Path(self.audio_dir)
-        #                   .joinpath(Path(
-        #                       self.preproc['annots_path']).stem
-        #                             )
-        #                   )
-        # if not self.load_path.exists():
-        #     self.load_path = self.load_path.parent
         
     def get_timestamp_dir(self):
         return time.strftime('%Y-%m-%d_%H-%M___'

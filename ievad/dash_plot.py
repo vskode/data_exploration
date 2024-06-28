@@ -7,9 +7,8 @@ from pathlib import Path
 import yaml
 import pandas as pd
 import librosa as lb
+import helpers as he
 import plot_helpers as ph
-
-from ievad.vggish import vggish_params
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
@@ -43,15 +42,15 @@ def create_specs(audio):
     if config['preproc']['downsample']:
         f_max = config['preproc']['downsample_sr']
     else:
-        f_max = vggish_params.MEL_MAX_HZ
+        f_max = he.MEL_MAX_HZ
 
     fig = px.imshow(S_dB, origin='lower', 
                     aspect = 'auto',
-                    y = np.linspace(vggish_params.MEL_MIN_HZ, 
+                    y = np.linspace(he.MEL_MIN_HZ, 
                                     f_max, 
                                     S_dB.shape[0]),
                     x = np.linspace(0, 
-                                    vggish_params.EXAMPLE_WINDOW_SECONDS, 
+                                    he.CORRECTED_CONTEXT_WIN_TIME, 
                                     S_dB.shape[1]),
                     labels = {'x' : 'time in s', 
                             'y' : 'frequency in Hz'},
@@ -118,7 +117,8 @@ def plotUMAP_Continuous_plotly(umap_embeds, percentiles,
     if LOAD_PATH.joinpath('meta_data.csv').exists():
         meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
         meta_df = ph.align_df_and_embeddings(files, meta_df)
-        meta_df = ph.get_df_to_corresponding_file_part(files_array, meta_df)
+        meta_df = ph.get_df_to_corresponding_file_part(files_array, 
+                                                       meta_df)
         
         for key in ['preds', 'site', 'file_stem', 'time_in_orig_file']:
             if key in meta_df.keys(): 
