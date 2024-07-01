@@ -15,11 +15,11 @@ time_in_samps = int(config_preproc["model_sr"] * config_preproc["model_time_leng
 CORRECTED_CONTEXT_WIN_TIME =  (
     (time_in_samps - 1024) - np.mod((time_in_samps - 1024), 95) + 1024
 ) / config_preproc["model_sr"]
-MEL_MIN_HZ = config["model_sr"] / 40
-MEL_MAX_HZ = config["model_sr"] / 2
+MEL_MIN_HZ = config_preproc["model_sr"] / 40
+MEL_MAX_HZ = config_preproc["model_sr"] / 2
 
 SAVE_PATH = Path(config['audio_dir']).joinpath(
-            Path(config['preproc']['annots_path']).stem
+            Path(config_preproc['annots_path']).stem
             )
 if not SAVE_PATH.exists():
     SAVE_PATH = SAVE_PATH.parent

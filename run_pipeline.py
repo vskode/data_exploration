@@ -1,6 +1,9 @@
 from ievad.umap_embed import get_embeddings
+from ievad.dash_plot import plotUMAP_Continuous_plotly
 
 # embed
 
 # plot
-acc_embeddings, folders, file_list, lenghts = get_embeddings()
+embeddings, metadata_dict = get_embeddings()
+
+plotUMAP_Continuous_plotly(embeddings, metadata_dict)

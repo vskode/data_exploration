@@ -7,8 +7,8 @@ from pathlib import Path
 import yaml
 import pandas as pd
 import librosa as lb
-import helpers as he
-import plot_helpers as ph
+from . import helpers as he
+from . import plot_helpers as ph
 
 with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
@@ -107,45 +107,45 @@ def build_dash_layout(data, title, file_date=None,
         ]
     )    
 
-def plotUMAP_Continuous_plotly(umap_embeds, percentiles, 
-                               colormap, files, lengths, 
+def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict,
                                title = config['title'] ):
 
         
-        
+    files_array = metadata_dict['files']['audio_files']
     data = dict()
-    if LOAD_PATH.joinpath('meta_data.csv').exists():
-        meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
-        meta_df = ph.align_df_and_embeddings(files, meta_df)
-        meta_df = ph.get_df_to_corresponding_file_part(files_array, 
-                                                       meta_df)
+    # if LOAD_PATH.joinpath('meta_data.csv').exists():
+    #     meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
+    #     # meta_df = ph.align_df_and_embeddings(files, meta_df)
+    #     meta_df = ph.get_df_to_corresponding_file_part(files_array, 
+    #                                                    meta_df)
         
-        for key in ['preds', 'site', 'file_stem', 'time_in_orig_file']:
-            if key in meta_df.keys(): 
-                data.update({key: meta_df[key].values})
-        if 'file_datetime' in meta_df:
-            data.update({
-                'file_date': meta_df['file_datetime'][0].split(' ')[0],
-                'file_time': meta_df['file_datetime'][0].split(' ')[1]
-            })
-        n = len(meta_df)
-    else:
-        try:
-            dtimes = list(map(ph.get_dt_strings_from_filename, files_array))
-            dates, times = [[d[0] for d in dtimes], [t[1] for t in dtimes]]
-        except Exception as e:
-            print('time format not found in file name', e)
-            dates, times = [0]*len(umap_embeds), [0]*len(umap_embeds)
-        data.update({'file_date': dates, 
-                     'file_time': times,
-                     'file_stem': files_array,
-                     'site': list(map(lambda s: s.split('_')[0], files_array))})
-        n = len(umap_embeds)
+    #     for key in ['preds', 'site', 'file_stem', 'time_in_orig_file']:
+    #         if key in meta_df.keys(): 
+    #             data.update({key: meta_df[key].values})
+    #     if 'file_datetime' in meta_df:
+    #         data.update({
+    #             'file_date': meta_df['file_datetime'][0].split(' ')[0],
+    #             'file_time': meta_df['file_datetime'][0].split(' ')[1]
+    #         })
+    #     n = len(meta_df)
+    # else:
+    try:
+        dtimes = list(map(ph.get_dt_strings_from_filename, files_array))
+        dates, times = [[d[0] for d in dtimes], [t[1] for t in dtimes]]
+    except Exception as e:
+        print('time format not found in file name', e)
+        dates, times = [0]*len(umap_embeds), [0]*len(umap_embeds)
+    data.update({})
     
-    data.update({'x' : umap_embeds[:,0][:n],
-                 'y':  umap_embeds[:,1][:n],
-                 'time_in_condensed_file' : divisions_array[:n],
-                 'filename' : files_array[:n]})
+    for ind, (file, embed) in enumerate(zip(files_array, umap_embeds)):
+        data.update({'x': embed[:,0]})
+        data.update({'y': embed[:,1]})
+        length = embed[:,0].shape[0]
+        data.update({'filename': [file]*length})
+        data.update({'file_date': [dates[ind]]*length})
+        data.update({'file_time': [times[ind]]*length})
+        data.update({'file_stem': [files_array[ind]]*length})
+        data.update({'site': [list(map(lambda s: s.split('_')[0], files_array))[ind]]*length})
     if 'time_in_orig_file' in data.keys():
         orig_file_time = True
     else:

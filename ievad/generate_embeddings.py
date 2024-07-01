@@ -15,34 +15,38 @@ class Loader():
         for key, val in self.config.items():
             setattr(self, key, val)
         
-        self.check_exists = check_if_combination_exists
+        self.check_if_combination_exists = check_if_combination_exists
+        self.check_embeds_already_exist()
         if self.model_name != 'umap':
             self._get_audio_paths()
             self._init_metadata_dict()
         else:
             self.get_embeddings()
         
-    def embeds_already_exist(self):
+        if not self.combination_already_exists:
+            self.embed_dir.mkdir(exist_ok=True, parents=True)
+        
+    def check_embeds_already_exist(self):
         self.combination_already_exists = False
         
-        if self.check_exists:
+        if self.check_if_combination_exists:
             if self.model_name == 'umap':
                 existing_embed_dirs = Path(self.umap_parent_dir).iterdir()
             else:
                 existing_embed_dirs = Path(self.embed_parent_dir).iterdir()
                 
             for d in existing_embed_dirs:
+                
                 if (self.model_name in d.stem 
                     and Path(self.audio_dir).stem in d.stem):
+                    
                     num_files = len([f for f in d.iterdir() 
                                     if f.suffix == '.pickle'])
                     num_audio_files = len([f for f in 
                                            Path(self.audio_dir).iterdir()])
+                    
                     if num_audio_files == num_files:
                         self.combination_already_exists = True
-                        return 1
-        
-        self.embed_dir.mkdir(exist_ok=True, parents=True)
 
     def _init_metadata_dict(self):
         self.metadata_dict = {
@@ -56,18 +60,24 @@ class Loader():
             }
         }
         
-    def get_embeddings(self):
-        self.folder = self.get_embedding_dir()
-        self.files = [f for f in self.folder.iterdir() 
-                      if f.suffix == '.pickle']
-        with open(self.folder.joinpath('metadata.yml'), "r") as f:
+    def _get_metadata_dict(self, folder):
+        with open(folder.joinpath('metadata.yml'), "r") as f:
             self.metadata_dict =  yaml.safe_load(f)
+        
+    def get_embeddings(self):
+        embed_dir = self.get_embedding_dir()
+        self.files = [f for f in embed_dir.iterdir() 
+                      if f.suffix == '.pickle']
+        self._get_metadata_dict(embed_dir)
         self.embed_dir = (Path(self.umap_parent_dir)
                             .joinpath(self.get_timestamp_dir()
                                     + f'-{self.embedding_model}'))
 
     def get_embedding_dir(self):
-        self.embed_parent_dir = Path(self.embed_parent_dir)
+        if self.combination_already_exists and self.model_name == 'umap':
+            self.embed_parent_dir = Path(self.umap_parent_dir)
+        else:
+            self.embed_parent_dir = Path(self.embed_parent_dir)
         self.audio_dir = Path(self.audio_dir)
         
         embed_dirs = [d for d in self.embed_parent_dir.iterdir()
@@ -123,6 +133,10 @@ class Loader():
     def write_metadata_file(self):
         with open(str(self.embed_dir.joinpath('metadata.yml')), 'w') as f:
             yaml.safe_dump(self.metadata_dict, f)
+            
+    def update_attributes(self, **kwargs):
+        if self.model_name == 'umap':
+            self.__init__(**kwargs)
 
 class Embedder():
     def __init__(self, model_name, **kwargs):
@@ -162,7 +176,7 @@ class Embedder():
 
 def generate_embeddings(**kwargs):
     ld = Loader(**kwargs)
-    if not ld.embeds_already_exist():    
+    if not ld.combination_already_exists:    
         embed = Embedder(**kwargs)
         for file in ld.files:
             sample = ld.load(file)
@@ -171,4 +185,5 @@ def generate_embeddings(**kwargs):
             embeds = embed.get_embeddings_from_model(sample)
             embed.save_embeddings_as_pickle(ld.embed_dir, file, embeds)
         ld.write_metadata_file()
+        ld.update_attributes(**kwargs)
     return ld

@@ -17,7 +17,7 @@ def get_embeddings():
     for file in ld.files:
         embeds.append(pickle.load(open(file, 'rb')))
     
-    return embeds
+    return embeds, ld.metadata_dict
 
 def create_timeList(lengths, files):
     lin_array = np.arange(0, max(lengths), 0.96)
@@ -30,8 +30,3 @@ def create_timeList(lengths, files):
                 f'{int(lin_array[j]/60)}:{np.mod(lin_array[j], 60):.2f}s')
     return divisions_array, files_array
     
-def generate_umaps(audioEmbeddingsList, lengths, files):
-    umap_embeds = compute_umap_embeddings(audioEmbeddingsList)
-
-    divisions_array, files_array = create_timeList(lengths, 
-                                [f.stem for f in files])
