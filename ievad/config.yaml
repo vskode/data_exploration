@@ -8,6 +8,7 @@ audio_dir :       "ievad/files/audio/humpbacks"
 
 # fixed path, embeddings will be stored here, DO NOT CHANGE
 embed_parent_dir :   "ievad/files/embeds"
+umap_parent_dir :   "ievad/files/umap_embeds"
 
 # sample rate
 sr : 16000

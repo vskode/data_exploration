@@ -8,19 +8,16 @@ with open('ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 
-def get_embeddings(limit = None):
+def get_embeddings():
     generate_embeddings(model_name=config['embedding_model'], 
-                        ignore_check_if_combination_exists=False)
-    generate_embeddings(model_name='umap', 
-                        ignore_check_if_combination_exists=False)
-
-    ld = Loader(model_name='umap', 
-                ignore_check_if_combination_exists=False)
+                        check_if_combination_exists=True)
+    ld = generate_embeddings(model_name='umap', 
+                        check_if_combination_exists=True)
     embeds = []
     for file in ld.files:
-        embeds.append(ld.load(file))
+        embeds.append(pickle.load(open(file, 'rb')))
     
-    # return acc_embeddings, file_list, lengths
+    return embeds
 
 def create_timeList(lengths, files):
     lin_array = np.arange(0, max(lengths), 0.96)

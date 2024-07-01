@@ -5,7 +5,7 @@ import yaml
 import time
 
 class Loader():
-    def __init__(self, ignore_check_if_combination_exists=False, 
+    def __init__(self, check_if_combination_exists=True, 
                  model_name='umap', **kwargs):
         self.model_name = model_name
         
@@ -15,20 +15,22 @@ class Loader():
         for key, val in self.config.items():
             setattr(self, key, val)
         
-        self.check_exists = ignore_check_if_combination_exists
-        if not self.embeds_already_exist():
-            if self.model_name != 'umap':
-                self._get_audio_paths()
-                self._init_metadata_dict()
-            else:
-                self.umap_parent_dir = 'umap_embeds'
-                self.get_embeddings()
+        self.check_exists = check_if_combination_exists
+        if self.model_name != 'umap':
+            self._get_audio_paths()
+            self._init_metadata_dict()
+        else:
+            self.get_embeddings()
         
     def embeds_already_exist(self):
         self.combination_already_exists = False
         
-        if not self.check_exists:
-            existing_embed_dirs = Path(self.embed_parent_dir).iterdir()
+        if self.check_exists:
+            if self.model_name == 'umap':
+                existing_embed_dirs = Path(self.umap_parent_dir).iterdir()
+            else:
+                existing_embed_dirs = Path(self.embed_parent_dir).iterdir()
+                
             for d in existing_embed_dirs:
                 if (self.model_name in d.stem 
                     and Path(self.audio_dir).stem in d.stem):
@@ -39,6 +41,8 @@ class Loader():
                     if num_audio_files == num_files:
                         self.combination_already_exists = True
                         return 1
+        
+        self.embed_dir.mkdir(exist_ok=True, parents=True)
 
     def _init_metadata_dict(self):
         self.metadata_dict = {
@@ -56,17 +60,11 @@ class Loader():
         self.folder = self.get_embedding_dir()
         self.files = [f for f in self.folder.iterdir() 
                       if f.suffix == '.pickle']
-        try:
-            with open(self.folder.joinpath('metadata.yml'), "r") as f:
-                self.metadata_dict =  yaml.safe_load(f)
-            self.embed_dir = (self.embed_parent_dir
-                              .parent
-                              .joinpath(self.umap_parent_dir)
-                              .joinpath(self.get_timestamp_dir()
-                                        + f'-{self.embedding_model}'))
-            self.embed_dir.mkdir()
-        except Exception as e:
-            print('Directory does not contain metadata file.')
+        with open(self.folder.joinpath('metadata.yml'), "r") as f:
+            self.metadata_dict =  yaml.safe_load(f)
+        self.embed_dir = (Path(self.umap_parent_dir)
+                            .joinpath(self.get_timestamp_dir()
+                                    + f'-{self.embedding_model}'))
 
     def get_embedding_dir(self):
         self.embed_parent_dir = Path(self.embed_parent_dir)
@@ -96,7 +94,6 @@ class Loader():
         
         self.embed_dir = (Path(self.embed_parent_dir)
                           .joinpath(self.get_timestamp_dir()))
-        self.embed_dir.mkdir(exist_ok=True, parents=True)
         
     def embed_read(self, file):
         import pickle
@@ -147,7 +144,7 @@ class Embedder():
 
     def get_callable_vggish_model(self, **kwargs):
         import tensorflow_hub as hub
-        return hub.load('ievad/models/vggish')
+        return hub.load('ievad/files/models/vggish')
 
     def get_embeddings_from_model(self, samples):
         embeds = self.model(samples)
@@ -174,3 +171,4 @@ def generate_embeddings(**kwargs):
             embeds = embed.get_embeddings_from_model(sample)
             embed.save_embeddings_as_pickle(ld.embed_dir, file, embeds)
         ld.write_metadata_file()
+    return ld
