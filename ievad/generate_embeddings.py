@@ -68,6 +68,7 @@ class Loader():
         embed_dir = self.get_embedding_dir()
         self.files = [f for f in embed_dir.iterdir() 
                       if f.suffix == '.pickle']
+        self.files.sort()
         self._get_metadata_dict(embed_dir)
         self.embed_dir = (Path(self.umap_parent_dir)
                             .joinpath(self.get_timestamp_dir()
@@ -117,7 +118,7 @@ class Loader():
             return self.embed_read(file)
     
     def audio_read(self, file):
-        if not file.suffix in ['.WAV', '.wav', '.aif']:
+        if not file.suffix in ['.WAV', '.wav', '.aif', '.m4a']:
             return None
         audio, _ = lb.load(file, sr=self.sr)
         

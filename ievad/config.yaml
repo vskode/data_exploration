@@ -4,7 +4,7 @@
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-audio_dir :       "ievad/files/audio/humpbacks"
+audio_dir :       "ievad/files/audio/rainforest"
 
 # fixed path, embeddings will be stored here, DO NOT CHANGE
 embed_parent_dir :   "ievad/files/embeds"
@@ -53,7 +53,7 @@ preproc:
 
   ## Fixed model parameters, do not change
   model_sr:           6000
-  model_time_length:  2
+  model_time_length:  0.96
   # model_sr:           16000
   # model_time_length:  0.96
 

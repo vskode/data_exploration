@@ -79,7 +79,7 @@ def build_dash_layout(data, title, file_date=None,
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
-                                        color = data['file_stem'],
+                                        color = data['filename'],
                                         symbol = data['file_date'],
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
@@ -107,12 +107,13 @@ def build_dash_layout(data, title, file_date=None,
         ]
     )    
 
-def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict,
+def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict, divisions_array,
                                title = config['title'] ):
 
         
     files_array = metadata_dict['files']['audio_files']
-    data = dict()
+    data = dict(x=np.array([]), y=np.array([]), 
+                filename=[], file_date=[], file_time=[])
     # if LOAD_PATH.joinpath('meta_data.csv').exists():
     #     meta_df = pd.read_csv(LOAD_PATH.joinpath('meta_data.csv'))
     #     # meta_df = ph.align_df_and_embeddings(files, meta_df)
@@ -135,17 +136,19 @@ def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict,
     except Exception as e:
         print('time format not found in file name', e)
         dates, times = [0]*len(umap_embeds), [0]*len(umap_embeds)
-    data.update({})
+    data.update({'time_in_orig_file': divisions_array})
     
-    for ind, (file, embed) in enumerate(zip(files_array, umap_embeds)):
-        data.update({'x': embed[:,0]})
-        data.update({'y': embed[:,1]})
-        length = embed[:,0].shape[0]
-        data.update({'filename': [file]*length})
-        data.update({'file_date': [dates[ind]]*length})
-        data.update({'file_time': [times[ind]]*length})
-        data.update({'file_stem': [files_array[ind]]*length})
-        data.update({'site': [list(map(lambda s: s.split('_')[0], files_array))[ind]]*length})
+    length = []
+    for embed in umap_embeds:
+        length.append(embed[:,0].shape[0])
+        data['x'] = np.append(data['x'], embed[:,0])
+        data['y'] = np.append(data['y'], embed[:,1])
+        
+    for key, array in zip(['filename', 'file_date', 'file_time'], 
+                          [files_array, dates, times]):
+        [[data[key].append(file) for _ in range(length[ind])] 
+         for ind, file in enumerate(array)]
+    
     if 'time_in_orig_file' in data.keys():
         orig_file_time = True
     else:
@@ -169,8 +172,8 @@ def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict,
                     "file: ...")
         
         else:
-            time_in_file = clickData['points'][0]['customdata'][-2]
-            file_path = clickData['points'][0]['customdata'][-1]
+            time_in_file = clickData['points'][0]['customdata'][-1]
+            file_path = clickData['points'][0]['customdata'][-4]
             
             audio, sr, file_stem = ph.load_audio(time_in_file, file_path)
             spec = create_specs(audio)

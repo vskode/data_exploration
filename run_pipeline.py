@@ -4,6 +4,6 @@ from ievad.dash_plot import plotUMAP_Continuous_plotly
 # embed
 
 # plot
-embeddings, metadata_dict = get_embeddings()
+embeddings, metadata_dict, divisions_array = get_embeddings()
 
-plotUMAP_Continuous_plotly(embeddings, metadata_dict)
+plotUMAP_Continuous_plotly(embeddings, metadata_dict, divisions_array)

@@ -2,7 +2,7 @@
 ievad/files/embeds/*
 ievad/files/umap_embeds/*
 ievad/files/models/*
-ievad/files/raw/*
+ievad/files/audio/*
 # files/raw/*
 inemviz/vggish/training*
 vggish_model.ckpt
