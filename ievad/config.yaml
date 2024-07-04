@@ -4,7 +4,7 @@
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-audio_dir :       "ievad/files/audio/rainforest"
+audio_dir :       "ievad/files/audio/humpbacks"
 
 # fixed path, embeddings will be stored here, DO NOT CHANGE
 embed_parent_dir :   "ievad/files/embeds"
@@ -14,7 +14,10 @@ umap_parent_dir :   "ievad/files/umap_embeds"
 sr : 16000
 
 # embedding model name
-embedding_model: 'vggish'
+embedding_model: 'aves'
+
+# limit of how many context windows can be processed at once
+cntxt_win_lim: 800
 
 # length limitation for condensed file
 segs_lim:             1500
@@ -46,8 +49,8 @@ preproc:
   sound_files_path:   'ievad/files/raw/uncondensed'
   # sound_files_path:   '/media/vincent/Expansion/NOAA/NRS08_20162018_new20220711'
   # set to lowest sample rate in your dataset, to ensure comparability
-  downsample_sr:      2000
-  resamp_size:        10000
+  downsample_sr:      16000
+  resamp_size:        16000
   # if you don't want to downsample the data to a common sample rate, set to 'False'
   downsample:         True
 

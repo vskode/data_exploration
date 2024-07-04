@@ -38,7 +38,8 @@ class Loader():
             for d in existing_embed_dirs:
                 
                 if (self.model_name in d.stem 
-                    and Path(self.audio_dir).stem in d.stem):
+                    and Path(self.audio_dir).stem in d.stem
+                    and self.embedding_model in d.stem):
                     
                     num_files = len([f for f in d.iterdir() 
                                     if f.suffix == '.pickle'])
@@ -129,7 +130,7 @@ class Loader():
             len(audio)//self.sr
             )
         
-        return (audio * 32767).astype(np.int16)
+        return audio
     
     def write_metadata_file(self):
         with open(str(self.embed_dir.joinpath('metadata.yml')), 'w') as f:
@@ -139,15 +140,11 @@ class Loader():
         if self.model_name == 'umap':
             self.__init__(**kwargs)
 
-class Embedder():
-    def __init__(self, model_name, **kwargs):
-        self.model_name = model_name
-        self._init_model(**kwargs)
-
-    def _init_model(self, **kwargs):
-        self.model = getattr(self, 
-                             f'get_callable_{self.model_name}_model')(**kwargs)
-        
+class PrepareModel():
+    def get_callable_aves_model(self, pooling='mean', **kwargs):
+        from .get_aves_model import AvesTorchaudioWrapper
+        return AvesTorchaudioWrapper(pooling=pooling)
+    
     def get_callable_umap_model(self, n_neighbors=15, 
                                 n_components=2, metric='euclidean', 
                                 **kwargs):
@@ -161,7 +158,44 @@ class Embedder():
         import tensorflow_hub as hub
         return hub.load('ievad/files/models/vggish')
 
-    def get_embeddings_from_model(self, samples):
+class PreProcessing():    
+    def get_vggish_preprocessing(self, audio):
+        return (audio * 32767).astype(np.int16)
+
+    def get_umap_preprocessing(self, embeds):
+        return embeds
+    
+    def get_aves_preprocessing(self, audio):
+        import torch
+        segment_length = int(self.config['sr']
+                          *self.config['preproc']['model_time_length'])
+        num_of_segments = int(audio.shape[0]/segment_length)
+        audio = audio[:num_of_segments*segment_length]
+        
+        num_of_batches = int(num_of_segments/self.config['cntxt_win_lim']+1)
+        
+        if num_of_segments > self.config['cntxt_win_lim']:
+            num_of_segments = self.config['cntxt_win_lim']
+        audio = audio.reshape(num_of_batches, num_of_segments, segment_length)
+        
+        return torch.tensor(audio)
+
+class Embedder(PrepareModel, PreProcessing):
+    def __init__(self, model_name, **kwargs):
+        import yaml
+        with open('ievad/config.yaml', 'rb') as f:
+            self.config = yaml.safe_load(f)
+            
+        self.model_name = model_name
+        self._init_model(**kwargs)
+
+    def _init_model(self, **kwargs):
+        self.model = getattr(self, 
+                             f'get_callable_{self.model_name}_model')(**kwargs)
+        
+
+    def get_embeddings_from_model(self, input):
+        samples = getattr(self, f'get_{self.model_name}_preprocessing')(input)
         embeds = self.model(samples)
         if not isinstance(embeds, np.ndarray):
             embeds = embeds.numpy()
@@ -174,16 +208,16 @@ class Embedder():
         import pickle
         with open(file_dest, 'wb') as f:
             pickle.dump(embeds, f, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
 def generate_embeddings(**kwargs):
     ld = Loader(**kwargs)
     if not ld.combination_already_exists:    
         embed = Embedder(**kwargs)
         for file in ld.files:
-            sample = ld.load(file)
-            if sample is None:
+            input = ld.load(file)
+            if input is None:
                 continue
-            embeds = embed.get_embeddings_from_model(sample)
+            embeds = embed.get_embeddings_from_model(input)
             embed.save_embeddings_as_pickle(ld.embed_dir, file, embeds)
         ld.write_metadata_file()
         ld.update_attributes(**kwargs)
