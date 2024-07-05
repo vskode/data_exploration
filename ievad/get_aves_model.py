@@ -2,9 +2,13 @@ from torchaudio.models import wav2vec2_model
 import json
 import torch
 import torch.nn as nn
+import logging
+logger = logging.getLogger('ievad')
+logger.setLevel(level=logging.DEBUG)
 
 CONFIG_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.model_config.json'
 MODEL_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.pt'
+BATCH_SIZE = 64
 
 class AvesTorchaudioWrapper(nn.Module):
 
@@ -19,6 +23,7 @@ class AvesTorchaudioWrapper(nn.Module):
         self.model = wav2vec2_model(**self.config, aux_num_out=None)
         self.model.load_state_dict(torch.load(model_path))
         self.model.feature_extractor.requires_grad_(False)
+        self.model.eval()
 
     def load_config(self, config_path):
         with open(config_path, 'r') as ff:
@@ -29,11 +34,15 @@ class AvesTorchaudioWrapper(nn.Module):
     def forward(self, sig):
         # extract_feature in the torchaudio version will output all 12 layers' output, -1 to select the final one
         import numpy as np
-        out_np = np.array([])
-        for s in sig:
-            out = self.model.extract_features(s)[0][-1]
+                
+        for i in range(sig.shape[0]//BATCH_SIZE+1):
+            batch = sig[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
+            out = self.model.extract_features(batch)[0][-1]
             out = getattr(torch, self.pooling)(out, dim=1)
-            out_np = np.append(out_np, out.detach().numpy())
+            if i == 0:
+                out_np = out.detach().numpy()
+            else:
+                out_np = np.append(out_np, out.detach().numpy(), axis=0)        
         return out_np
     
 if __name__ == '__main__':
@@ -42,3 +51,5 @@ if __name__ == '__main__':
     waveform = torch.rand((16_000))
     x = waveform.unsqueeze(0)
     a = torchaudio_model(x)
+    
+    

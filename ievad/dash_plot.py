@@ -40,13 +40,13 @@ def create_specs(audio):
     f_max, S_dB = ph.set_axis_lims_dep_sr(S_dB)
     
     if config['preproc']['downsample']:
-        f_max = config['preproc']['downsample_sr']
+        f_max = config['preproc']['downsample_sr']/2
     else:
         f_max = he.MEL_MAX_HZ
 
     fig = px.imshow(S_dB, origin='lower', 
                     aspect = 'auto',
-                    y = np.linspace(he.MEL_MIN_HZ, 
+                    y = np.linspace(0, 
                                     f_max, 
                                     S_dB.shape[0]),
                     x = np.linspace(0, 

@@ -16,9 +16,6 @@ sr : 16000
 # embedding model name
 embedding_model: 'aves'
 
-# limit of how many context windows can be processed at once
-cntxt_win_lim: 800
-
 # length limitation for condensed file
 segs_lim:             1500
 
@@ -34,6 +31,11 @@ f_min:                50
 # amplify audio to make audible
 amp:                  5
 
+# UMAP settings
+n_neighbors : 15
+n_components : 2
+metric : 'euclidean'
+random_state: 42
 
 # CONDENSER:
 dt_format_std:        False
@@ -55,7 +57,7 @@ preproc:
   downsample:         True
 
   ## Fixed model parameters, do not change
-  model_sr:           6000
+  model_sr:           16000
   model_time_length:  0.96
   # model_sr:           16000
   # model_time_length:  0.96

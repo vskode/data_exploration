@@ -3,6 +3,8 @@ import numpy as np
 from pathlib import Path
 import yaml
 import time
+import logging
+logger = logging.getLogger('ievad')
 
 class Loader():
     def __init__(self, check_if_combination_exists=True, 
@@ -25,6 +27,14 @@ class Loader():
         
         if not self.combination_already_exists:
             self.embed_dir.mkdir(exist_ok=True, parents=True)
+        else:
+            logger.debug(
+                'Combination of {} and {} already '
+                'exists -> using saved embeddings in {}'
+                .format(self.model_name,
+                        Path(self.audio_dir).stem,
+                        str(self.embed_dir))
+                )
         
     def check_embeds_already_exist(self):
         self.combination_already_exists = False
@@ -145,13 +155,13 @@ class PrepareModel():
         from .get_aves_model import AvesTorchaudioWrapper
         return AvesTorchaudioWrapper(pooling=pooling)
     
-    def get_callable_umap_model(self, n_neighbors=15, 
-                                n_components=2, metric='euclidean', 
-                                **kwargs):
+    def get_callable_umap_model(self, **kwargs):
         import umap
-        return umap.UMAP(n_neighbors=n_neighbors,
-                         n_components=n_components,
-                         metric=metric).fit_transform
+        return umap.UMAP(n_neighbors=self.config['n_neighbors'],
+                         n_components=self.config['n_components'],
+                         metric=self.config['metric'],
+                         random_state=self.config['random_state']
+                         ).fit_transform
 
 
     def get_callable_vggish_model(self, **kwargs):
@@ -171,12 +181,7 @@ class PreProcessing():
                           *self.config['preproc']['model_time_length'])
         num_of_segments = int(audio.shape[0]/segment_length)
         audio = audio[:num_of_segments*segment_length]
-        
-        num_of_batches = int(num_of_segments/self.config['cntxt_win_lim']+1)
-        
-        if num_of_segments > self.config['cntxt_win_lim']:
-            num_of_segments = self.config['cntxt_win_lim']
-        audio = audio.reshape(num_of_batches, num_of_segments, segment_length)
+        audio = audio.reshape(num_of_segments, segment_length)
         
         return torch.tensor(audio)
 
@@ -196,9 +201,14 @@ class Embedder(PrepareModel, PreProcessing):
 
     def get_embeddings_from_model(self, input):
         samples = getattr(self, f'get_{self.model_name}_preprocessing')(input)
+        start = time.time()
+        
         embeds = self.model(samples)
         if not isinstance(embeds, np.ndarray):
             embeds = embeds.numpy()
+        
+        logger.debug(f'{self.model_name} embeddings have shape: {embeds.shape}')
+        logger.info(f'{self.model_name} inference took {time.time()-start:.2f}s.')
         return embeds
 
     def save_embeddings_as_pickle(self, embed_dir, file, embeds):
