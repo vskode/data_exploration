@@ -40,7 +40,7 @@ def create_specs(audio):
     f_max, S_dB = ph.set_axis_lims_dep_sr(S_dB)
     
     if config['preproc']['downsample']:
-        f_max = config['preproc']['downsample_sr']/2
+        f_max = config['preproc']['plot_spec_sr']/2
     else:
         f_max = he.MEL_MAX_HZ
 
@@ -75,11 +75,12 @@ def build_dash_layout(data, title, file_date=None,
     return dash.html.Div(
         [
             dash.html.Div([
-                dash.html.H1(children=title),
+                dash.html.H1(children=f"{title} - {config['embedding_model']}"),
                 dash.dcc.Graph(
                     id="bar_chart",
                     figure = px.scatter(data, x='x', y='y', 
                                         color = data['filename'],
+                                        # color = data['annot'],
                                         symbol = data['file_date'],
                                         # symbol_sequence = symbols,
                                         opacity = 0.4,
@@ -153,6 +154,9 @@ def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict, divisions_array,
         orig_file_time = True
     else:
         orig_file_time = False
+    
+    # from ievad.annots import return_data_with_annots
+    # data = return_data_with_annots(config, data)
 
     app = dash.Dash(__name__, external_stylesheets=['./styles.css'])
     app.layout = build_dash_layout(data, title, file_date=True, 
@@ -172,8 +176,8 @@ def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict, divisions_array,
                     "file: ...")
         
         else:
-            time_in_file = clickData['points'][0]['customdata'][-1]
-            file_path = clickData['points'][0]['customdata'][-4]
+            time_in_file = clickData['points'][0]['customdata'][3]
+            file_path = clickData['points'][0]['customdata'][0]
             
             audio, sr, file_stem = ph.load_audio(time_in_file, file_path)
             spec = create_specs(audio)
@@ -191,6 +195,6 @@ def plotUMAP_Continuous_plotly(umap_embeds, metadata_dict, divisions_array,
             
         return spec, title
     
-    app.run_server(debug = False)
+    app.run_server(debug = False, port=8054)
     
 

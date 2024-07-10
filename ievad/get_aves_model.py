@@ -5,9 +5,16 @@ import torch.nn as nn
 import logging
 logger = logging.getLogger('ievad')
 logger.setLevel(level=logging.DEBUG)
+import yaml
+with open('ievad/config.yaml', 'rb') as f:
+    config = yaml.safe_load(f)
 
-CONFIG_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.model_config.json'
-MODEL_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.pt'
+if config['embedding_model'] == 'birdaves':
+    CONFIG_PATH = 'ievad/files/models/birdaves/birdaves-bioxn-large.torchaudio.model_config.json'
+    MODEL_PATH = 'ievad/files/models/birdaves/birdaves-bioxn-large.torchaudio.pt'
+else:
+    CONFIG_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.model_config.json'
+    MODEL_PATH = 'ievad/files/models/aves/aves-base-bio.torchaudio.pt'
 BATCH_SIZE = 64
 
 class AvesTorchaudioWrapper(nn.Module):

@@ -89,7 +89,7 @@ def load_audio(t_s, file):
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
                         offset=t_f, 
-                        sr=config['preproc']['model_sr'], 
+                        sr=config['preproc']['plot_spec_sr'], 
                         duration = CORRECTED_CONTEXT_WIN_TIME)
     return audio, sr, file_stem
  
