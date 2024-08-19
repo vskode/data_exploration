@@ -4,7 +4,7 @@
 # define paths for your data, these are the standard directories, if you 
 # used the file condenser. If you do not have annotated data, and all of your
 # sound files are in one directory, change accordingly
-audio_dir :       "ievad/files/audio/wav"
+audio_dir :       "ievad/files/audio/rainforest"
 # audio_dir :       "/media/vincent/Extreme SSD/MA/20221019-Benoit/transfer_1780104_files_cfc5b86f/SABA01_201511_201604_SN275/resampled_2kHz/wav"
 
 # fixed path, embeddings will be stored here, DO NOT CHANGE
@@ -13,10 +13,10 @@ umap_parent_dir :   "ievad/files/umap_embeds"
 
 # annots_path:        'ievad/files/raw/annots'
 # sample rate
-sr : 2000
+sr : 48000
 
 # embedding model name
-embedding_model: 'birdaves'
+embedding_model: 'birdnet'
 
 # length limitation for condensed file
 segs_lim:             1500

@@ -75,11 +75,17 @@ class Loader():
     def _get_audio_paths(self):
         self.audio_dir = Path(self.audio_dir)
 
-        self.files = list(self.audio_dir.rglob('*wav'))
+        self.files = self._get_audio_files()
         
         self.embed_dir = (Path(self.embed_parent_dir)
                           .joinpath(self.get_timestamp_dir()))
 
+    def _get_audio_files(self):
+        files_list = []
+        [[files_list.append(ll) for ll in self.audio_dir.rglob(string)] 
+         for string in ['*wav', '*mp3']]
+        return files_list
+    
     def _init_metadata_dict(self):
         self.metadata_dict = {
             'model_name': self.model_name,
@@ -212,6 +218,12 @@ class PrepareModel():
         import tensorflow_hub as hub
         return hub.load('ievad/files/models/vggish')
     
+    def get_callable_birdnet_model(self, **kwargs):
+        import tensorflow as tf
+        model = tf.keras.models.load_model('ievad/files/models/birdnet', compile=False)
+        return tf.keras.Sequential(model.embeddings_model)
+        # return lambda x: model.embeddings(x)['embeddings']
+        
     def get_callable_hbdet_model(self, **kwargs):
         import tensorflow as tf
         from tensorflow_addons import metrics
@@ -243,6 +255,18 @@ class PreProcessing():
 
         return tf.convert_to_tensor(wins)
 
+    def get_birdnet_preprocessing(self, audio):
+        import tensorflow as tf
+        re_audio = lb.resample(audio, 
+                               orig_sr = self.config['sr'], 
+                               target_sr = 48000)
+        num = np.ceil(len(re_audio) / 144000)
+        # zero pad in case the end is reached
+        re_audio = [*re_audio, *np.zeros([int(num * 144000 - len(re_audio))])]
+        wins = np.array(re_audio).reshape([int(num), 144000])
+
+        return tf.convert_to_tensor(wins, dtype=tf.float32)
+    
     def get_umap_preprocessing(self, embeds):
         return embeds
     

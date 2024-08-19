@@ -1,7 +1,7 @@
 from ievad.umap_embed import get_embeddings
 from ievad.dash_plot import plotUMAP_Continuous_plotly
 
-config = 4
+config = 1
 
 
 if config == 1:
