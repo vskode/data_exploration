@@ -1,0 +1,17 @@
+*__pycache__*
+ievad/files/embeds/*
+ievad/files/umap_embeds/*
+ievad/files/models/*
+ievad/files/audio/*
+# files/raw/*
+inemviz/vggish/training*
+vggish_model.ckpt
+test*
+env_*
+*.pickle
+*.yml
+*.pb
+*.pt
+*.torchaudio*
+*variables.*
+*.wav

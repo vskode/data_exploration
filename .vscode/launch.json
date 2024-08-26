@@ -6,11 +6,18 @@
     "configurations": [
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/src"
         }
     ]
 }
