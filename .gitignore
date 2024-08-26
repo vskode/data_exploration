@@ -8,3 +8,10 @@ inemviz/vggish/training*
 vggish_model.ckpt
 test*
 env_*
+*.pickle
+*.yml
+*.pb
+*.pt
+*.torchaudio*
+*variables.*
+*.wav
