@@ -14,15 +14,16 @@ export const LineChart = ({
   color,
 }) => {
   // bounds = area inside the graph axis = calculated by substracting the margins
+  // const data = null;
   const axesRef = useRef(null);
   const boundsWidth = width - MARGIN.right - MARGIN.left;
   const boundsHeight = height - MARGIN.top - MARGIN.bottom;
-
-  const [min, yMax] = d3.extent(data.y);
+  
+  const [yMin, yMax] = d3.extent(data.y);
   const yScale = useMemo(() => {
     return d3
     .scaleLinear()
-    .domain([0, yMax || 0])
+    .domain([yMin, yMax || 0])
     .range([boundsHeight, 0]);
   }, [data, height]);
 
@@ -31,7 +32,7 @@ export const LineChart = ({
   const xScale = useMemo(() => {
     return d3
       .scaleLinear()
-      .domain([0, xMax || 0])
+      .domain([xMin, xMax || 0])
       .range([0, boundsWidth]);
   }, [data, width]);
 
@@ -66,7 +67,8 @@ export const LineChart = ({
           closest = {
             'x': data.x[i],
             'y': data.y[i],
-            'z': data.z[i],
+            'z': data.timestamp[i],
+            'meta': data.metadata,
           };
           PairingVariable = closest['z']
         }
@@ -74,11 +76,12 @@ export const LineChart = ({
       }
     }
     else {
-      let index = data.z.findIndex((e) => e == PairingVariable)
+      let index = data.timestamp.findIndex((e) => e == PairingVariable)
       closest = {
         'x': data.x[index],
         'y': data.y[index],
-        'z': data.z[index],
+        'z': data.timestamp[index],
+        'meta': data.metadata,
       };
     }
     return closest;
@@ -102,13 +105,29 @@ export const LineChart = ({
     axios.post(url+'getDataPoint/', dataPoint)
     .then(response => {
       console.log(response.data)
+      showSpectrogram(response.data.spectogram_data)
     })
     .catch(function (error) {
       // handle error
       console.log(error);
     })
   };
-  
+
+  const showSpectrogram = (array) => {
+    return (
+      <>
+        <rect 
+          x={10}
+          y={123} 
+          width={100} 
+          height={200} 
+          fill='#AAAAAA'
+          visibility='visible'></rect>
+      </>
+    )
+    
+  }
+
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
     points.push(

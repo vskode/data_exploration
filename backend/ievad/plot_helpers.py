@@ -8,11 +8,11 @@ import datetime as dt
 import sounddevice as sd
 from pathlib import Path
 
-from ievad.helpers import (get_datetime_from_filename, 
+from backend.ievad.helpers import (get_datetime_from_filename, 
                            CORRECTED_CONTEXT_WIN_TIME)
 
 
-with open('ievad/config.yaml', 'rb') as f:
+with open('backend/ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 LOAD_PATH = Path(config['audio_dir']).joinpath(
@@ -85,10 +85,11 @@ def time_string_to_float(t):
 def load_audio(t_s, file):
     file_stem = file#Path(file).stem
     main_path = Path(LOAD_PATH)
-    t_f = time_string_to_float(t_s)
+    if not isinstance(t_s, float):
+        t_s = time_string_to_float(t_s)
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
-                        offset=t_f, 
+                        offset=t_s, 
                         sr=config['preproc']['plot_spec_sr'], 
                         duration = CORRECTED_CONTEXT_WIN_TIME)
     return audio, sr, file_stem

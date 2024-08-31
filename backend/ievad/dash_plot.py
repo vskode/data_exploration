@@ -10,7 +10,7 @@ import librosa as lb
 from . import helpers as he
 from . import plot_helpers as ph
 
-with open('ievad/config.yaml', 'rb') as f:
+with open('backend/ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
     
 LOAD_PATH = Path(config['audio_dir']).joinpath(
@@ -33,6 +33,12 @@ def plot_wo_specs(data, timeLabels, title, centroids, classes):
     
     fig.show()
     fig.write_html('Interactive_Plot.html')
+    
+def create_specs2(audio):
+    S = np.abs(lb.stft(audio, win_length = config['spec_win_len']))
+    S_dB = lb.amplitude_to_db(S, ref=np.max)
+    f_max, S_dB = ph.set_axis_lims_dep_sr(S_dB)
+    return S_dB
     
 def create_specs(audio):
     S = np.abs(lb.stft(audio, win_length = config['spec_win_len']))

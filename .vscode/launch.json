@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "backend.sample:app",
+                "--reload"
+            ],
+            "jinja": true
+        },
+        {
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",

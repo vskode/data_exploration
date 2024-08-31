@@ -12,13 +12,18 @@ class Loader():
                  model_name='umap', **kwargs):
         self.model_name = model_name
         
-        with open('ievad/config.yaml', "r") as f:
+        with open('backend/ievad/config.yaml', "r") as f:
             self.config =  yaml.safe_load(f)
             
         for key, val in self.config.items():
             setattr(self, key, val)
         
         self.check_if_combination_exists = check_if_combination_exists
+        if self.model_name == 'umap':
+            self.embed_suffix = '.json'
+        else:
+            self.embed_suffix = '.npy'
+            
         self.check_embeds_already_exist()
         if self.combination_already_exists or self.model_name == 'umap':
             self.get_embeddings()
@@ -63,9 +68,11 @@ class Loader():
                     and self.embedding_model in d.stem):
                     
                     num_files = len([f for f in d.iterdir() 
-                                    if f.suffix == '.pickle'])
-                    num_audio_files = len([f for f in 
-                                           Path(self.audio_dir).iterdir()])
+                                    if f.suffix == self.embed_suffix])
+                    num_audio_files = len([
+                        f for f in Path(self.audio_dir).iterdir()
+                        if f.suffix in self.config['audio_suffixes']
+                        ])
                     
                     if num_audio_files == num_files:
                         self.combination_already_exists = True
@@ -82,8 +89,8 @@ class Loader():
 
     def _get_audio_files(self):
         files_list = []
-        [[files_list.append(ll) for ll in self.audio_dir.rglob(string)] 
-         for string in ['*wav', '*mp3']]
+        [[files_list.append(ll) for ll in self.audio_dir.rglob(f'*{string}')] 
+         for string in self.config['audio_suffixes']]
         return files_list
     
     def _init_metadata_dict(self):
@@ -110,7 +117,7 @@ class Loader():
     def get_embeddings(self):
         embed_dir = self.get_embedding_dir()
         self.files = [f for f in embed_dir.iterdir() 
-                      if f.suffix == '.pickle']
+                      if f.suffix == self.embed_suffix]
         self.files.sort()
         if not self.combination_already_exists:
             self._get_metadata_dict(embed_dir)
@@ -128,6 +135,7 @@ class Loader():
                 self.embed_parent_dir = Path(self.umap_parent_dir)
             else:
                 self.embed_parent_dir = Path(self.embed_parent_dir)
+                self.embed_suffix = '.npy'
         else:
             return self.embed_dir
         self.audio_dir = Path(self.audio_dir)
@@ -155,9 +163,7 @@ class Loader():
                                       time.localtime())
         
     def embed_read(self, file):
-        import pickle
-        with open(file, 'rb') as e:
-            embeds = pickle.load(e)
+        embeds = np.load(file)
         self.metadata_dict['files']['embedding_files'].append(
             str(file)
             )
@@ -173,7 +179,8 @@ class Loader():
             return self.embed_read(file)
     
     def audio_read(self, file):
-        if not file.suffix in ['.WAV', '.wav', '.aif', '.m4a']:
+        if not file.suffix in self.config['audio_suffixes']:
+            logger.warning(f'{str(file)} could not be read due to unsupported format.')
             return None
         with open(file, 'rb') as r:
             audio, _ = lb.load(r, sr=self.sr)
@@ -194,7 +201,7 @@ class Loader():
     def update_files(self):
         if self.model_name == 'umap':
             self.files = [f for f in self.embed_dir.iterdir() 
-                          if f.suffix == '.pickle']
+                          if f.suffix == '.json']
 
 class PrepareModel():
     def get_callable_aves_model(self, pooling='mean', **kwargs):
@@ -216,19 +223,19 @@ class PrepareModel():
 
     def get_callable_vggish_model(self, **kwargs):
         import tensorflow_hub as hub
-        return hub.load('ievad/files/models/vggish')
+        return hub.load('backend/ievad/models/vggish')
     
     def get_callable_birdnet_model(self, **kwargs):
         import tensorflow as tf
-        model = tf.keras.models.load_model('ievad/files/models/birdnet', compile=False)
+        model = tf.keras.models.load_model('backend/ievad/models/birdnet', compile=False)
         return tf.keras.Sequential(model.embeddings_model)
         # return lambda x: model.embeddings(x)['embeddings']
         
     def get_callable_hbdet_model(self, **kwargs):
         import tensorflow as tf
         from tensorflow_addons import metrics
-        from ievad.files.models.hbdet import front_end
-        orig_model = tf.keras.models.load_model('ievad/files/models/hbdet',
+        from ievad.models.hbdet import front_end
+        orig_model = tf.keras.models.load_model('backend/ievad/models/hbdet',
                 custom_objects={"FBetaScote": metrics.FBetaScore},
         )
         model_list = orig_model.layers[:-2]
@@ -286,7 +293,7 @@ class PreProcessing():
 class Embedder(PrepareModel, PreProcessing):
     def __init__(self, model_name, **kwargs):
         import yaml
-        with open('ievad/config.yaml', 'rb') as f:
+        with open('backend/ievad/config.yaml', 'rb') as f:
             self.config = yaml.safe_load(f)
             
         self.model_name = model_name
@@ -309,24 +316,46 @@ class Embedder(PrepareModel, PreProcessing):
         logger.info(f'{self.model_name} inference took {time.time()-start:.2f}s.')
         return embeds
 
-    def save_embeddings_as_pickle(self, embed_dir, file, embeds):
-        file_dest = embed_dir.joinpath(file.stem 
-                                       + f'_{self.model_name}.pickle')
+    def save_embeddings(self, file_idx, fileloader_obj, file, embeds):
+        file_dest = fileloader_obj.embed_dir.joinpath(file.stem 
+                                                      + '_'
+                                                      + self.model_name)
+        if file.suffix == '.npy':
+            file_dest = str(file_dest) + '.json'
+            input_len = 3
+            save_embeddings_dict_with_timestamps(file_dest, embeds, input_len, 
+                                                 fileloader_obj, file_idx)
+        else:
+            file_dest = str(file_dest) + '.npy'
+            np.save(file_dest, embeds)
         
-        import pickle
-        with open(file_dest, 'wb') as f:
-            pickle.dump(embeds, f, protocol=pickle.HIGHEST_PROTOCOL)
+def save_embeddings_dict_with_timestamps(file_dest, embeds, input_len, 
+                                         loader_obj, f_idx):
+    length = embeds.shape[0]
+    lin_array = np.arange(0, length*input_len, input_len)
+    d = {var: embeds[:, i].tolist() 
+         for i, var in zip(range(embeds.shape[1]), ['x', 'y'])}
+    d['timestamp'] = lin_array.tolist()
+    
+    d['metadata'] = {k: (v[f_idx] if isinstance(v, list) else v) 
+                     for (k, v) in loader_obj.metadata_dict['files'].items()}
+    d['metadata'].update({k: v for (k, v) in loader_obj.metadata_dict.items()
+                          if not isinstance(v, dict)})
+    
+    import json
+    with open(file_dest, 'w') as f:
+        json.dump(d, f)
     
 def generate_embeddings(**kwargs):
     ld = Loader(**kwargs)
     if not ld.combination_already_exists:    
         embed = Embedder(**kwargs)
-        for file in tqdm(ld.files):
+        for idx, file in tqdm(enumerate(ld.files)):
             input = ld.load(file)
             if input is None:
                 continue
             embeds = embed.get_embeddings_from_model(input)
-            embed.save_embeddings_as_pickle(ld.embed_dir, file, embeds)
+            embed.save_embeddings(idx, ld, file, embeds)
         ld.write_metadata_file()
         ld.update_files()
     return ld

@@ -40,3 +40,6 @@ env_*
 *.torchaudio*
 *variables.*
 *.wav
+*.json
+*.npy
+frontend/public

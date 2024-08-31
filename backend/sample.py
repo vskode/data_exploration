@@ -1,12 +1,16 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
+from pathlib import Path
+from backend.ievad.plot_helpers import load_audio
+from backend.ievad.dash_plot import create_specs2
 
 
 class Item(BaseModel):
-    x: int
-    y: int
-    z: int
+    x: float
+    y: float
+    z: float
+    meta: dict
 
 # with open('public/data.json', 'r') as f:
 #     data = f.read()
@@ -24,7 +28,12 @@ app.add_middleware(
 @app.post("/getDataPoint")
 async def create_item(item: Item):
     print(item)
-    return {'message': 'values successfully received'}
+    audio, sr, file_stem = load_audio(item.z, 
+                                      item.meta['audio_files'])
+    spec = create_specs2(audio)
+    # print(spec)
+    return {'message': 'values successfully received', 
+            'spectogram_data': spec.tolist()}
 
 @app.get("/")
 # async def create_item(item: Item):
