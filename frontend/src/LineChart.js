@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import * as d3 from "d3";
+import { ShowSpectogram } from "./ShowSpectogram";
 
 const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
 var PairingVariable = null;
@@ -102,10 +103,12 @@ export const LineChart = ({
     event.stopPropagation();  // Prevent event from being swallowed by other elements
     console.log("Circle clicked:", dataPoint);
     const url = "http://127.0.0.1:8000/";
+    let speccy = null;
     axios.post(url+'getDataPoint/', dataPoint)
     .then(response => {
       console.log(response.data)
-      showSpectrogram(response.data.spectogram_data)
+      speccy = response.data.spectogram_data;
+      ShowSpectogram(data=speccy)
     })
     .catch(function (error) {
       // handle error
@@ -113,20 +116,20 @@ export const LineChart = ({
     })
   };
 
-  const showSpectrogram = (array) => {
-    return (
-      <>
-        <rect 
-          x={10}
-          y={123} 
-          width={100} 
-          height={200} 
-          fill='#AAAAAA'
-          visibility='visible'></rect>
-      </>
-    )
+  // const showSpectrogram = (array) => {
+  //   return (
+  //     <>
+  //       <rect 
+  //         x={10}
+  //         y={123} 
+  //         width={100} 
+  //         height={200} 
+  //         fill='#AAAAAA'
+  //         visibility='visible'></rect>
+  //     </>
+  //   )
     
-  }
+  // }
 
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
