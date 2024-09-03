@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { LineChart } from "./LineChart";
-import { MakeSpectogram } from "./Spectogram";
+import { MakeSpectrogram } from "./Spectrogram";
 import axios from "axios";
 
 export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
@@ -26,8 +26,6 @@ export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
 
     fetchData();
   }, []);
-  
-
 
   if (loading) {
     return <div>Loading...</div>;
@@ -53,7 +51,7 @@ export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
         setCursorPosition={setCursorPosition}
         color={"#6689c6"}
       />
-      <MakeSpectogram 
+      <MakeSpectrogram 
         data={specData}
       />
     </div>

@@ -5,29 +5,32 @@ import axios from "axios";
 const width=700
 const height=400
 
-export const MakeSpectogram = ({
-    data=null
+export const MakeSpectrogram = ({
+  data
 })  => {
-    const specData = data;
+    const [initSpec, setInitSpec] = useState(null);
+    let specData = data;
     const fileSpec = "test.json";
     const canvasRef = useRef(null);
-    
-    useEffect(() => {
-        if (!data) {
-          const fetchData = async () => {
-            try {
-              const response3 = await axios.get(fileSpec);
-              specData = response3.data;
-            } catch (error) {
-              console.error("Error fetching data:", error);
-            }
-          };
-          fetchData();
+
+    if (!initSpec) {
+      console.log('trying to get initial pic')
+      const fetchData = async () => {
+        try {
+          const response3 = await axios.get(fileSpec);
+          setInitSpec(response3.data);
+        } catch (error) {
+          console.error("Error fetching data:", error);
         }
-      }, []);
-    
+      };
+      fetchData();
+    }
+    if (!specData && initSpec) {
+      specData = initSpec
+    }
+
     useEffect(() => {
-      if (canvasRef.current) {
+      if (specData && canvasRef.current) {
 
         console.log("inside MakeSpec")
         const canvas = canvasRef.current;
@@ -53,7 +56,8 @@ export const MakeSpectogram = ({
     
         for (let i = 0; i < numRows; i++) {
           for (let j = 0; j < numCols; j++) {
-            const value = specData[i][j];
+            // const value = specData[i][j];
+            const value = specData[numRows-i-1][j];
             const normalizedValue = (value - minVal) / (maxVal - minVal);
             const color = d3.interpolateViridis(normalizedValue);
     
@@ -79,24 +83,18 @@ export const MakeSpectogram = ({
         // Calculate scale to fit the heatmap to the canvas
         const scaleX = canvas.width / numCols;
         const scaleY = canvas.height / numRows;
+
     
         // Use drawImage to scale the heatmap data
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(offscreenCanvas, 0, 0, numCols, numRows, 0, 0, canvas.width, canvas.height);
       }
     }, [specData, width, height]);
-      
-      // useMemo((loading) => {
-        // if (spec) {
-        //   drawHeatmap(spec);
-        // }
-      // }, [spec]);
-
 
     return (
         <canvas
-        ref={canvasRef}
-        style={{ marginLeft: 20, border: "1px solid #ccc" }}
+          ref={canvasRef}
+          style={{ marginLeft: 0, border: "1px solid #ccc" }}
         />
     )
 }

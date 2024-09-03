@@ -33,7 +33,7 @@ async def create_item(item: Item):
     spec = create_specs2(audio)
     # print(spec)
     return {'message': 'values successfully received', 
-            'spectogram_data': spec.tolist()}
+            'spectrogram_data': spec.tolist()}
 
 @app.get("/")
 # async def create_item(item: Item):

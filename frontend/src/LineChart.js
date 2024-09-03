@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import * as d3 from "d3";
-import { MakeSpectogram } from "./Spectogram";
+import { MakeSpectrogram } from "./Spectrogram";
 
 const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
 var PairingVariable = null;
@@ -16,7 +16,6 @@ export const LineChart = ({
   color,
 }) => {
   // bounds = area inside the graph axis = calculated by substracting the margins
-  // const data = null;
   const axesRef = useRef(null);
   const boundsWidth = width - MARGIN.right - MARGIN.left;
   const boundsHeight = height - MARGIN.top - MARGIN.bottom;
@@ -109,7 +108,7 @@ export const LineChart = ({
     axios.post(url+'getDataPoint/', dataPoint)
     .then(response => {
       console.log(response.data)
-      speccy = response.data.spectogram_data;
+      speccy = response.data.spectrogram_data;
       setSpecData(speccy)
     })
     .catch(function (error) {
@@ -205,27 +204,3 @@ const Cursor = ({ x, y, color }) => {
     </>
   );
 };
-
-
-// export const ShowSpectogram = ({
-//   speccy
-// }) => {
-//   const a = 0;
-//   console.log('hi hier sind data', speccy)
-
-//   if (speccy) {
-//     MakeSpectogram(speccy)
-//   } else {
-//     return (
-//       <>
-//         <rect 
-//           x={10}
-//           y={123} 
-//           width={100} 
-//           height={200} 
-//           fill='#AAAAAA'
-//           visibility='visible'></rect>
-//       </>
-//     ) 
-//   }
-// }
