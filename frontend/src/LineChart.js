@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import * as d3 from "d3";
-import { ShowSpectogram } from "./ShowSpectogram";
+import { MakeSpectogram } from "./Spectogram";
 
 const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
 var PairingVariable = null;
@@ -10,6 +10,7 @@ export const LineChart = ({
   width,
   height,
   data,
+  setSpecData,
   cursorPosition,
   setCursorPosition,
   color,
@@ -99,7 +100,8 @@ export const LineChart = ({
     setCursorPosition(xScale(closest.x));
   };
   
-  const handleClick = (event, dataPoint) => {
+  const handleClick = (event) => {
+    const dataPoint = getClosestPoint(cursorPosition);
     event.stopPropagation();  // Prevent event from being swallowed by other elements
     console.log("Circle clicked:", dataPoint);
     const url = "http://127.0.0.1:8000/";
@@ -108,28 +110,13 @@ export const LineChart = ({
     .then(response => {
       console.log(response.data)
       speccy = response.data.spectogram_data;
-      ShowSpectogram(data=speccy)
+      setSpecData(speccy)
     })
     .catch(function (error) {
       // handle error
       console.log(error);
     })
   };
-
-  // const showSpectrogram = (array) => {
-  //   return (
-  //     <>
-  //       <rect 
-  //         x={10}
-  //         y={123} 
-  //         width={100} 
-  //         height={200} 
-  //         fill='#AAAAAA'
-  //         visibility='visible'></rect>
-  //     </>
-  //   )
-    
-  // }
 
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
@@ -174,7 +161,8 @@ export const LineChart = ({
             onMouseLeave={() => setCursorPosition(null)}
             visibility={"hidden"}
             pointerEvents={"all"}
-            onClick={(e) => handleClick(e, getClosestPoint(cursorPosition))}
+            // onClick={(e) => handleClick(e, getClosestPoint(cursorPosition))}
+            onClick={handleClick}
           />
         </g>
         <g
@@ -217,3 +205,27 @@ const Cursor = ({ x, y, color }) => {
     </>
   );
 };
+
+
+// export const ShowSpectogram = ({
+//   speccy
+// }) => {
+//   const a = 0;
+//   console.log('hi hier sind data', speccy)
+
+//   if (speccy) {
+//     MakeSpectogram(speccy)
+//   } else {
+//     return (
+//       <>
+//         <rect 
+//           x={10}
+//           y={123} 
+//           width={100} 
+//           height={200} 
+//           fill='#AAAAAA'
+//           visibility='visible'></rect>
+//       </>
+//     ) 
+//   }
+// }
