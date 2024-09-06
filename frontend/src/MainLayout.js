@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { LineChart } from "./LineChart";
+import { ScatterPlot } from "./ScatterPlot";
 import { MakeSpectrogram } from "./Spectrogram";
 import axios from "axios";
 
-export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
+export const MainLayout = ({ width = 700, height = 400 }) => {
   const [specData, setSpecData] = useState();
   const [cursorPosition, setCursorPosition] = useState();
   const [embeddings, setEmbeddings] = useState(null);
@@ -33,7 +33,7 @@ export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
   
   return (
     <div style={{ display: "flex" }}>
-      <LineChart
+      <ScatterPlot
         width={width / 2}
         height={height}
         data={embeddings.data1}
@@ -42,7 +42,7 @@ export const LineChartSyncCursor = ({ width = 700, height = 400 }) => {
         setCursorPosition={setCursorPosition}
         color={"#e85252"}
       />
-      <LineChart
+      <ScatterPlot
         width={width / 2}
         height={height}
         data={embeddings.data2}

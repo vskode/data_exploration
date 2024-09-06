@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import * as d3 from "d3";
-import { MakeSpectrogram } from "./Spectrogram";
 
 const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
 var PairingVariable = null;
 
-export const LineChart = ({
+export const ScatterPlot = ({
   width,
   height,
   data,
