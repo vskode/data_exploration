@@ -53,6 +53,12 @@ export const ScatterPlot = ({
   //
   const getClosestPoint = (cursorPixelPosition) => {
     const x = xScale.invert(cursorPixelPosition);
+    // const y = yScale.invert(cursorPixelPosition);
+    // const a = data.x.map(e => Math.pow(e - x, 2))
+    // const b = data.y.map(e => Math.pow(e - y, 2))
+    // const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
+    // const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
+    // const dists = a.map((e, i) => e+b[i])
     let minDistance = Infinity;
     let closest = null;
     
@@ -116,6 +122,35 @@ export const ScatterPlot = ({
     })
   };
 
+  // const Cursor = (index, color) => {
+  //   console.log(index)
+  //   const width = 150;
+  //   const height = 50;
+  //   const x = xScale(data.x[index])
+  //   const y = yScale(data.y[index])
+  //     {<>
+  //       <circle 
+  //         cx={x} 
+  //         cy={y} 
+  //         r={5} 
+  //         fill={color}
+  //       />
+  //       <rect 
+  //         x={x-width} 
+  //         y={y-height} 
+  //         width={width} 
+  //         height={height} 
+  //         fill="#AAAAAA"
+  //         visibility={'visible'}></rect>
+  //       <text 
+  //         x={x-width+2} 
+  //         y={y-height+12} 
+  //         fontFamily="Verdana" 
+  //         fontSize="12" 
+  //         fill="white">{PairingVariable}</text>
+  //     </>}
+  // }
+
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
     points.push(
@@ -129,6 +164,8 @@ export const ScatterPlot = ({
       fill="#ABABAB"
       fillOpacity={0.2}
       strokeWidth={1}
+      // onMouseOver={Cursor(xScale(data.x[i]), xScale(data.y[i]), color)}
+      // onMouseOver={Cursor(i, color)}
     />         
     )
   }
