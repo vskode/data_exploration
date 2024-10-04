@@ -16,7 +16,7 @@ umap_parent_dir :   "frontend/public/files/umap_embeds"
 sr : 2000
 
 # embedding model name
-embedding_model: 'aves'
+embedding_model: 'perch'
 
 # length limitation for condensed file
 segs_lim:             1500

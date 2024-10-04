@@ -8,7 +8,7 @@ import datetime as dt
 import sounddevice as sd
 from pathlib import Path
 
-from backend.ievad.helpers import (get_datetime_from_filename, 
+from ievad.helpers import (get_datetime_from_filename, 
                            CORRECTED_CONTEXT_WIN_TIME)
 
 

@@ -208,6 +208,56 @@ class PrepareModel():
         from .get_aves_model import AvesTorchaudioWrapper
         return AvesTorchaudioWrapper(pooling=pooling)
     
+    def get_callable_perch_model(self, **kwargs):
+        from ml_collections import config_dict
+        from ievad.perch_chirp.chirp.inference import colab_utils
+        from ievad.perch_chirp.chirp.inference import embed_lib
+        from ievad.perch_chirp.chirp.projects.zoo import models
+        model_choice = 'perch_8'
+        config = config_dict.ConfigDict()
+        config.embed_fn_config = config_dict.ConfigDict()
+        config.embed_fn_config.model_config = config_dict.ConfigDict()
+        model_key, embedding_dim, model_config = models.get_preset_model_config(
+            model_choice)
+        config.embed_fn_config.model_key = model_key
+        config.embed_fn_config.model_config = model_config
+
+        # Only write embeddings to reduce size.
+        config.embed_fn_config.write_embeddings = True
+        config.embed_fn_config.write_logits = False
+        config.embed_fn_config.write_separated_audio = False
+        config.embed_fn_config.write_raw_audio = False
+        config.embed_fn_config.file_id_depth = 1
+        embed_fn = embed_lib.EmbedFn(**config.embed_fn_config)
+        embed_fn.setup()
+        model = embed_fn.embedding_model.embed
+        return lambda x: model(x).embeddings.squeeze()
+    
+    def get_callable_animal2vec_model(self, **kwargs):
+        from ievad.animal2vec_nn.nn import chunk_and_normalize
+        from fairseq import checkpoint_utils
+        import torch
+        path_to_pt_file = "backend/ievad/models/animal2vec/animal2vec_large_finetuned_MeerKAT_240507.pt"
+        models, _ = checkpoint_utils.load_model_ensemble([path_to_pt_file])
+        model = models[0].to("cpu")
+        model.eval()
+        
+        @torch.inference_mode()
+        def a2v_infer(samples):
+            all_embeds = []
+            for batch in tqdm(samples[0]):
+                res = model(source=batch.view(1, -1))
+                embeds = res['layer_results']
+                np_embeds = [a.detach().numpy() for a in embeds]
+                all_embeds.append(np_embeds)
+            return np.array(all_embeds)
+        
+        return a2v_infer
+        # with torch.inference_mode():
+        #     model.eval()
+        #     return lambda audio: model(source=audio)['layer_results']
+
+    
     def get_callable_birdaves_model(self, pooling='mean', **kwargs):
         return self.get_callable_aves_model(pooling=pooling, **kwargs)
     
@@ -250,6 +300,19 @@ class PrepareModel():
         return model.predict
 
 class PreProcessing():    
+    def get_perch_preprocessing(self, audio):
+        sr, win_len_s = 32000, 5.0
+        win_len_samples = int(sr*win_len_s)
+        re_audio = lb.resample(audio, 
+                               orig_sr = self.config['sr'], 
+                               target_sr = sr)
+        num = np.ceil(len(re_audio) / (sr*win_len_s))
+        # zero pad in case the end is reached
+        re_audio = [*re_audio, *np.zeros([int(num * win_len_samples - len(re_audio))])]
+        wins = np.array(re_audio).reshape([int(num), win_len_samples])
+
+        return np.array(wins, dtype=np.float32)
+    
     def get_vggish_preprocessing(self, audio):
         return (audio * 32767).astype(np.int16)
     
@@ -289,6 +352,22 @@ class PreProcessing():
     
     def get_birdaves_preprocessing(self, audio):        
         return self.get_aves_preprocessing(audio)
+    
+    def get_animal2vec_preprocessing(self, audio):
+        from ievad.animal2vec_nn.nn import chunk_and_normalize
+        import torch
+        chunk = chunk_and_normalize(
+            torch.tensor(audio),
+            segment_length=10,
+            sample_rate=8000,
+            normalize=True,
+            max_batch_size=16
+        )
+        # if not torch.is_tensor(chunk):
+        #     chunk = torch.stack(chunk)  # stack the list of tensors
+        # elif chunk.dim() == 1:  # split segments or single segment
+        #     chunk = chunk.view(1, -1)
+        return chunk
 
 class Embedder(PrepareModel, PreProcessing):
     def __init__(self, model_name, **kwargs):

@@ -8,7 +8,7 @@ logger = logging.getLogger('ievad')
 with open('backend/ievad/config.yaml', 'rb') as f:
     config = yaml.safe_load(f)
 
-def get_embeddings(check_if_primary_combination_exists=True,
+def get_embeddings(check_if_primary_combination_exists=False,
                    check_if_secondary_combination_exists=False):
     
     generate_embeddings(model_name=config['embedding_model'], 
