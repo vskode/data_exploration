@@ -253,10 +253,15 @@ class PrepareModel():
             return np.array(all_embeds)
         
         return a2v_infer
-        # with torch.inference_mode():
-        #     model.eval()
-        #     return lambda audio: model(source=audio)['layer_results']
 
+    def get_callable_biolingual_model(self, **kwargs):
+        from transformers import pipeline
+        audio_classifier = pipeline(
+            task="zero-shot-audio-classification", 
+            model="davidrrobinson/BioLingual"
+            )
+        embedder = audio_classifier.model.get_audio_features
+        return lambda x: embedder(x).detach().numpy()
     
     def get_callable_birdaves_model(self, pooling='mean', **kwargs):
         return self.get_callable_aves_model(pooling=pooling, **kwargs)
@@ -315,6 +320,25 @@ class PreProcessing():
     
     def get_vggish_preprocessing(self, audio):
         return (audio * 32767).astype(np.int16)
+    
+    def get_biolingual_preprocessing(self, audio):
+        import torch
+        from transformers import pipeline
+        sr = 48000
+        input_tensor_shape = [1, 1, 1001, 64]
+        re_audio = lb.resample(audio, 
+                        orig_sr = self.config['sr'], 
+                        target_sr = sr)
+        audio_classifier = pipeline(
+            task="zero-shot-audio-classification", 
+            model="davidrrobinson/BioLingual"
+            )
+        features = audio_classifier.feature_extractor(re_audio,
+                                                      sampling_rate = sr)
+        aud_features = features['input_features'][0]
+        aud_input = torch.tensor(aud_features.reshape(input_tensor_shape))
+        return aud_input
+        
     
     def get_hbdet_preprocessing(self, audio):
         import tensorflow as tf
