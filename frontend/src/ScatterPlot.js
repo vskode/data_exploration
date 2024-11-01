@@ -51,35 +51,42 @@ export const ScatterPlot = ({
   }, [xScale, yScale, boundsHeight]);
 
   //
-  const getClosestPoint = (cursorPixelPosition) => {
-    const x = xScale.invert(cursorPixelPosition);
-    // const y = yScale.invert(cursorPixelPosition);
-    // const a = data.x.map(e => Math.pow(e - x, 2))
-    // const b = data.y.map(e => Math.pow(e - y, 2))
-    // const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
-    // const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
-    // const dists = a.map((e, i) => e+b[i])
+  const getClosestPoint = (cursorPixelPositionX, cursorPixelPositionY) => {
+    const x = xScale.invert(cursorPixelPositionX);
+    const y = yScale.invert(cursorPixelPositionY);
+    const a = data.x.map(e => Math.pow(e - x, 2))
+    const b = data.y.map(e => Math.pow(e - y, 2))
+    const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
+    const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
+    const dists = a.map((e, i) => e+b[i])
+    const in_close = argMin(dists)
     let minDistance = Infinity;
     let closest = null;
-    
     if (PairingVariable == null){
-      let i = 0;
-      for (const point of data.x) {
-        const xDist = Math.abs(point - x)/xMax;
-        const distance = xDist;
-        if (distance < minDistance) {
-          minDistance = distance;
-          // closest = point;
-          closest = {
-            'x': data.x[i],
-            'y': data.y[i],
-            'z': data.timestamp[i],
-            'meta': data.metadata,
-          };
-          PairingVariable = closest['z']
-        }
-        i++
-      }
+      closest = {
+        'x': data.x[in_close],
+        'y': data.y[in_close],
+        'z': data.timestamp[in_close],
+        'meta': data.metadata,
+      };
+      PairingVariable = closest['z']
+    //   let i = 0;
+    //   for (const point of data.x) {
+    //     const xDist = Math.abs(point - x)/xMax;
+    //     const distance = xDist;
+    //     if (distance < minDistance) {
+    //       minDistance = distance;
+    //       // closest = point;
+    //       closest = {
+    //         'x': data.x[i],
+    //         'y': data.y[i],
+    //         'z': data.timestamp[i],
+    //         'meta': data.metadata,
+    //       };
+    //       PairingVariable = closest['z']
+    //     }
+    //     i++
+    //   }
     }
     else {
       let index = data.timestamp.findIndex((e) => e == PairingVariable)
@@ -98,10 +105,11 @@ export const ScatterPlot = ({
     PairingVariable = null;
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    const closest = getClosestPoint(mouseX);
+    const closest = getClosestPoint(mouseX, mouseY);
 
-    setCursorPosition(xScale(closest.x));
+    setCursorPosition([xScale(closest.x), yScale(closest.y)]);
   };
   
   const handleClick = (event) => {
