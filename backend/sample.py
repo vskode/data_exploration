@@ -28,8 +28,9 @@ app.add_middleware(
 @app.post("/getDataPoint")
 async def create_item(item: Item):
     print(item)
+    path = Path(Path(item.meta['audio_dir']).stem).joinpath(item.meta['audio_files'])
     audio, sr, file_stem = load_audio(item.z, 
-                                      item.meta['audio_files'])
+                                      path)
     spec = create_specs2(audio)
     # print(spec)
     return {'message': 'values successfully received', 

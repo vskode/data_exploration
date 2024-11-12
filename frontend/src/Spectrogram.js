@@ -31,7 +31,6 @@ export const MakeSpectrogram = ({
 
     useEffect(() => {
       if (specData && canvasRef.current) {
-
         console.log("inside MakeSpec")
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");

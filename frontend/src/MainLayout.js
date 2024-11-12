@@ -8,8 +8,8 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const [cursorPosition, setCursorPosition] = useState();
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const filePath1 = "/files/BermudaHumpbackWhale_20090111_003000_passt_umap.json";
-  const filePath2 = "/files/BermudaHumpbackWhale_20090111_003000_passt_umap.json";
+  const filePath1 = "/files/embeddings/2024-11-12_17-08___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
+  const filePath2 = "/files/embeddings/2024-11-12_17-08___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
 
   useEffect(() => {
     const fetchData = async () => {
