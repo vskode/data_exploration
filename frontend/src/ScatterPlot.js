@@ -35,6 +35,14 @@ export const ScatterPlot = ({
       .domain([xMin, xMax || 0])
       .range([0, boundsWidth]);
   }, [data, width]);
+  
+  // t axis
+  const [tMin, tMax] = d3.extent(data.timestamp);
+  const tScale = useMemo(() => {
+    return d3
+      .scaleLinear()
+      .domain([tMin, tMax || 0]);
+  }, [data, width]);
 
   // Render the X and Y axis using d3.js, not react
   useEffect(() => {
@@ -70,26 +78,10 @@ export const ScatterPlot = ({
         'meta': data.metadata,
       };
       PairingVariable = closest['z']
-    //   let i = 0;
-    //   for (const point of data.x) {
-    //     const xDist = Math.abs(point - x)/xMax;
-    //     const distance = xDist;
-    //     if (distance < minDistance) {
-    //       minDistance = distance;
-    //       // closest = point;
-    //       closest = {
-    //         'x': data.x[i],
-    //         'y': data.y[i],
-    //         'z': data.timestamp[i],
-    //         'meta': data.metadata,
-    //       };
-    //       PairingVariable = closest['z']
-    //     }
-    //     i++
-    //   }
     }
     else {
-      let index = data.timestamp.findIndex((e) => e == PairingVariable)
+      let index = argMin(data.timestamp.map((e, i) => Math.abs(e-PairingVariable)))
+      PairingVariable = data.timestamp[index]
       closest = {
         'x': data.x[index],
         'y': data.y[index],
@@ -117,47 +109,16 @@ export const ScatterPlot = ({
     event.stopPropagation();  // Prevent event from being swallowed by other elements
     console.log("Circle clicked:", dataPoint);
     const url = "http://127.0.0.1:8000/";
-    let speccy = null;
     axios.post(url+'getDataPoint/', dataPoint)
     .then(response => {
       console.log(response.data)
-      speccy = response.data.spectrogram_data;
-      setSpecData(speccy)
+      setSpecData(response.data.spectrogram_data)
     })
     .catch(function (error) {
       // handle error
       console.log(error);
     })
   };
-
-  // const Cursor = (index, color) => {
-  //   console.log(index)
-  //   const width = 150;
-  //   const height = 50;
-  //   const x = xScale(data.x[index])
-  //   const y = yScale(data.y[index])
-  //     {<>
-  //       <circle 
-  //         cx={x} 
-  //         cy={y} 
-  //         r={5} 
-  //         fill={color}
-  //       />
-  //       <rect 
-  //         x={x-width} 
-  //         y={y-height} 
-  //         width={width} 
-  //         height={height} 
-  //         fill="#AAAAAA"
-  //         visibility={'visible'}></rect>
-  //       <text 
-  //         x={x-width+2} 
-  //         y={y-height+12} 
-  //         fontFamily="Verdana" 
-  //         fontSize="12" 
-  //         fill="white">{PairingVariable}</text>
-  //     </>}
-  // }
 
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
@@ -168,7 +129,7 @@ export const ScatterPlot = ({
       cx={xScale(data.x[i])} // position on the X axis
       cy={yScale(data.y[i])} // on the Y axis
       opacity={1}
-      stroke="#cb1dd1"
+      stroke={toColor(data.timestamp[i])}
       fill="#ABABAB"
       fillOpacity={0.2}
       strokeWidth={1}
@@ -177,6 +138,12 @@ export const ScatterPlot = ({
     />         
     )
   }
+
+  function toColor(num) {
+    const col = tScale(num);
+    const c = d3['interpolateViridis'](col);
+    return c;
+}
 
   return (
     <div>
@@ -192,7 +159,7 @@ export const ScatterPlot = ({
               height={boundsHeight}
               x={xScale(getClosestPoint(cursorPosition)?.x)}
               y={yScale(getClosestPoint(cursorPosition)?.y)}
-              color={color}
+              color={toColor(getClosestPoint(cursorPosition)?.z)}
             />
           )}
           <rect
@@ -221,7 +188,7 @@ export const ScatterPlot = ({
 
 const Cursor = ({ x, y, color }) => {
 
-  const width = 150;
+  const width =  50;
   const height = 50;
 
   return (

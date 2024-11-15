@@ -8,15 +8,20 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const [cursorPosition, setCursorPosition] = useState();
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const filePath1 = "/files/embeddings/2024-11-12_17-08___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
-  const filePath2 = "/files/embeddings/2024-11-12_17-08___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
+  const filePath1 = "/files/embeddings/2024-11-15_17-26___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
+  const filePath2 = "/files/embeddings/2024-11-15_17-25___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
+  const filepaths = [filePath1, filePath2];
+  // response = {};
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response1 = await axios.get(filePath1);
-        const response2 = await axios.get(filePath2);
-        setEmbeddings({ 'data1': response1.data, 'data2': response2.data });
+        const response_dict = {};
+        for (let i = 0; i < filepaths.length; i++) {
+          const response = await axios.get(filepaths[i]);
+          response_dict[String('data'+(i+1))] =  response.data;
+        }
+        setEmbeddings(response_dict);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -26,31 +31,31 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
 
     fetchData();
   }, []);
-
+  
   if (loading) {
     return <div>Loading...</div>;
   }
   
-  return (
-    <div style={{ display: "flex" }}>
-      <ScatterPlot
+  const plots = [];
+  // for (embedding in embeddings) {
+  for (let i = 0; i < Object.keys(embeddings).length; i++) {
+    plots.push(
+    <ScatterPlot
         width={width / 2}
         height={height}
-        data={embeddings.data1}
+        data={embeddings[String('data'+(i+1))]}
         setSpecData={setSpecData}
         cursorPosition={cursorPosition}
         setCursorPosition={setCursorPosition}
         color={"#e85252"}
-      />
-      <ScatterPlot
-        width={width / 2}
-        height={height}
-        data={embeddings.data2}
-        setSpecData={setSpecData}
-        cursorPosition={cursorPosition}
-        setCursorPosition={setCursorPosition}
-        color={"#6689c6"}
-      />
+      />      
+    )
+  }
+
+
+  return (
+    <div style={{ display: "flex" }}>
+      {plots}
       <MakeSpectrogram 
         data={specData}
       />

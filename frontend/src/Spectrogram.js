@@ -10,7 +10,7 @@ export const MakeSpectrogram = ({
 })  => {
     const [initSpec, setInitSpec] = useState(null);
     let specData = data;
-    const fileSpec = "test.json";
+    const fileSpec = "init_spec.json";
     const canvasRef = useRef(null);
 
     if (!initSpec) {
