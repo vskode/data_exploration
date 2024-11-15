@@ -29,8 +29,12 @@ app.add_middleware(
 async def create_item(item: Item):
     print(item)
     path = Path(Path(item.meta['audio_dir']).stem).joinpath(item.meta['audio_files'])
+    sr = item.meta['sample_rate (Hz)']
+    segment_length = item.meta['segment_length (samples)'] / sr
     audio, sr, file_stem = load_audio(item.z, 
-                                      path)
+                                      path,
+                                      sr,
+                                      segment_length)
     spec = create_specs2(audio)
     # print(spec)
     return {'message': 'values successfully received', 

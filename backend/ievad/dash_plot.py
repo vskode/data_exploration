@@ -35,7 +35,10 @@ def plot_wo_specs(data, timeLabels, title, centroids, classes):
     fig.write_html('Interactive_Plot.html')
     
 def create_specs2(audio):
-    S = np.abs(lb.stft(audio, win_length = config['spec_win_len']))
+    hop_length = int(len(audio)/128)
+    n_fft = 2048 if hop_length < 2048 else int(2**np.ceil(np.log2(hop_length))) 
+    S = np.abs(lb.stft(audio, hop_length=hop_length, n_fft=n_fft))
+    S = S[1:].reshape([256, 4, 129]).mean(axis=1)
     S_dB = lb.amplitude_to_db(S, ref=np.max)
     f_max, S_dB = ph.set_axis_lims_dep_sr(S_dB)
     return S_dB

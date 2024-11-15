@@ -82,7 +82,7 @@ def time_string_to_float(t):
     ms = int(t.split('.')[-1][:-1])/100
     return min+sec+ms
     
-def load_audio(t_s, file):
+def load_audio(t_s, file, sr, segment_length):
     file_stem = file#Path(file).stem
     main_path = Path(LOAD_PATH)
     if not isinstance(t_s, float):
@@ -90,8 +90,8 @@ def load_audio(t_s, file):
     
     audio, sr = lb.load(main_path.joinpath(file_stem), 
                         offset=t_s, 
-                        sr=config['preproc']['plot_spec_sr'], 
-                        duration = CORRECTED_CONTEXT_WIN_TIME)
+                        sr=sr, 
+                        duration = segment_length)
     return audio, sr, file_stem
  
 def set_axis_lims_dep_sr(S_dB):
