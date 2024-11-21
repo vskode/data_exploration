@@ -44,6 +44,20 @@ export const ScatterPlot = ({
       .domain([tMin, tMax || 0]);
   }, [data, width]);
 
+  function onlyUnique(value, index, array) {
+    return array.indexOf(value) === index;
+  }
+  const labels = data.label.filter(onlyUnique).sort();
+  const length = labels.length;
+  const colors = Array.from({length: length}, (_, n) => n*(tMax/(length-1)))
+  const col_dict = {}
+  for (let i = 0; i < length; i++) {
+    col_dict[labels[i]] = colors[i]
+  }
+  if (data.label === undefined) {
+    data.label = data.timestamp;
+  }
+
   // Render the X and Y axis using d3.js, not react
   useEffect(() => {
     const svgElement = d3.select(axesRef.current);
@@ -76,6 +90,8 @@ export const ScatterPlot = ({
         'y': data.y[in_close],
         'z': data.timestamp[in_close],
         'meta': data.metadata,
+        'index': in_close,
+        // 'label': data.label[in_close]
       };
       PairingVariable = closest['z']
     }
@@ -87,6 +103,8 @@ export const ScatterPlot = ({
         'y': data.y[index],
         'z': data.timestamp[index],
         'meta': data.metadata,
+        'index': index,
+        // 'label': data.label[in_close]
       };
     }
     return closest;
@@ -94,6 +112,7 @@ export const ScatterPlot = ({
       
   //
   const onMouseMove = (e) => {
+  // const onMouseOver = (e) => {
     PairingVariable = null;
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
@@ -103,6 +122,7 @@ export const ScatterPlot = ({
 
     setCursorPosition([xScale(closest.x), yScale(closest.y)]);
   };
+
   
   const handleClick = (event) => {
     const dataPoint = getClosestPoint(cursorPosition);
@@ -129,18 +149,26 @@ export const ScatterPlot = ({
       cx={xScale(data.x[i])} // position on the X axis
       cy={yScale(data.y[i])} // on the Y axis
       opacity={1}
-      stroke={toColor(data.timestamp[i])}
+      // stroke={toColor(data.timestamp[i])}
+      stroke={toColor(data.label[i])}
       fill="#ABABAB"
       fillOpacity={0.2}
       strokeWidth={1}
       // onMouseOver={Cursor(xScale(data.x[i]), xScale(data.y[i]), color)}
+      // onMouseOver={onMouseOver}
       // onMouseOver={Cursor(i, color)}
     />         
     )
   }
 
+
   function toColor(num) {
-    const col = tScale(num);
+    let col = 0
+    // if (num instanceof String) {
+    col = tScale(col_dict[num]);
+    // } else {
+    //   col = tScale(num);
+    // }
     const c = d3['interpolateViridis'](col);
     return c;
 }

@@ -11,6 +11,8 @@ class Item(BaseModel):
     y: float
     z: float
     meta: dict
+    index: int
+    # label: float
 
 # with open('public/data.json', 'r') as f:
 #     data = f.read()
@@ -27,11 +29,16 @@ app.add_middleware(
 
 @app.post("/getDataPoint")
 async def create_item(item: Item):
-    print(item)
-    path = Path(Path(item.meta['audio_dir']).stem).joinpath(item.meta['audio_files'])
+    # print(item)
+    path = Path(Path(item.meta['audio_dir']).stem).joinpath(item.meta['audio_files'][item.index])
     sr = item.meta['sample_rate (Hz)']
     segment_length = item.meta['segment_length (samples)'] / sr
-    audio, sr, file_stem = load_audio(item.z, 
+    # if isinstance(item.label, float):
+    #     t_s = item.label
+    # else:
+    #     t_s = item.z
+        
+    audio, sr, file_stem = load_audio(0., 
                                       path,
                                       sr,
                                       segment_length)

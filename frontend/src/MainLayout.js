@@ -8,8 +8,10 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const [cursorPosition, setCursorPosition] = useState();
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const filePath1 = "/files/embeddings/2024-11-15_17-26___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
-  const filePath2 = "/files/embeddings/2024-11-15_17-25___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
+  const filePath1 = "/files/embeddings/umap_nn15/2024-11-21_10-19___umap-BuroojCallTypeData-biolingual/BuroojCallTypeData_umap.json";
+  const filePath2 = "/files/embeddings/umap_nn15/2024-11-21_10-18___umap-BuroojCallTypeData-animal2vec_xc/BuroojCallTypeData_umap.json";
+  // const filePath1 = "/files/embeddings/2024-11-15_17-26___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
+  // const filePath2 = "/files/embeddings/2024-11-15_17-25___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
   const filepaths = [filePath1, filePath2];
   // response = {};
 
