@@ -55,7 +55,7 @@ export const ScatterPlot = ({
     col_dict[labels[i]] = colors[i]
   }
   if (data.label === undefined) {
-    data.label = data.timestamp;
+    data.label = Array.from({length: data.x.length}, (_, n) => n);
   }
 
   // Render the X and Y axis using d3.js, not react

@@ -5,6 +5,7 @@ from pathlib import Path
 from backend.ievad.plot_helpers import load_audio
 from backend.ievad.dash_plot import create_specs2
 
+global_path = Path('frontend/public')
 
 class Item(BaseModel):
     x: float
@@ -14,8 +15,9 @@ class Item(BaseModel):
     index: int
     # label: float
 
-# with open('public/data.json', 'r') as f:
-#     data = f.read()
+class DataPath(BaseModel):
+    path: str
+
 app = FastAPI()
 
 app.add_middleware(
@@ -26,6 +28,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/getDictionaries")
+async def get_folders(path: DataPath):
+    jsons = [str(p.relative_to(global_path))
+             for p in global_path.joinpath(path.path).rglob('*json')][:3]
+    # print(jsons)
+    return {'message': 'dictionaries successfully retrieved', 
+            'dicts': jsons}
+    
 
 @app.post("/getDataPoint")
 async def create_item(item: Item):

@@ -8,59 +8,73 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const [cursorPosition, setCursorPosition] = useState();
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const filePath1 = "/files/embeddings/umap_nn15/2024-11-21_10-19___umap-BuroojCallTypeData-biolingual/BuroojCallTypeData_umap.json";
-  const filePath2 = "/files/embeddings/umap_nn15/2024-11-21_10-18___umap-BuroojCallTypeData-animal2vec_xc/BuroojCallTypeData_umap.json";
-  // const filePath1 = "/files/embeddings/2024-11-15_17-26___umap-bird_dawnchorus-birdnet/borneo_sunrise_20240208-063500_birdnet_umap.json";
-  // const filePath2 = "/files/embeddings/2024-11-15_17-25___umap-bird_dawnchorus-perch/borneo_sunrise_20240208-063500_perch_umap.json";
-  const filepaths = [filePath1, filePath2];
-  // response = {};
+  const path = { "path": "files/embeddings/umap_nn15/" };
 
+  // Fetch dictionaries from the backend
+  const getDictionaries = async () => {
+    let dicts = [];
+    try {
+      const url = "http://127.0.0.1:8000/getDictionaries/";
+      const response = await axios.post(url, path);
+      console.log("Dictionaries received:", response.data.dicts); // Log response
+      dicts = response.data.dicts; // Update dictionaries state
+      // setDictionariesLoaded(true); // Set the dictionaries as loaded
+      return dicts;
+    } catch (error) {
+      console.error("Error fetching dictionaries:", error);
+    }
+    return;
+  };
+
+  // Fetch embeddings only if dictionaries are populated and loaded
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response_dict = {};
-        for (let i = 0; i < filepaths.length; i++) {
-          const response = await axios.get(filepaths[i]);
-          response_dict[String('data'+(i+1))] =  response.data;
+    const fetchEmbeddings = async () => {
+      let dicts = [];
+        try {
+          const response_dict = {};
+          dicts = await getDictionaries();
+          for (let i = 0; i < dicts.length; i++) {
+            console.log("Fetching file from:", dicts[i]); // Log file path being requested
+            const response = await axios.get(dicts[i]);
+            response_dict[`data${i + 1}`] = response.data;
+          }
+          setEmbeddings(response_dict);
+          console.log("Embeddings received:", response_dict); // Log response
+          // }
+        } catch (error) {
+          console.error("Error fetching embeddings:", error);
+        } finally {
+          setLoading(false);
         }
-        setEmbeddings(response_dict);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
     };
 
-    fetchData();
-  }, []);
-  
+    fetchEmbeddings();
+  }, []); // This effect runs when `dictionariesLoaded` or `dictionaries` change
+
   if (loading) {
     return <div>Loading...</div>;
   }
-  
+
   const plots = [];
-  // for (embedding in embeddings) {
   for (let i = 0; i < Object.keys(embeddings).length; i++) {
     plots.push(
-    <ScatterPlot
+      <ScatterPlot
+        key={i}
         width={width / 2}
         height={height}
-        data={embeddings[String('data'+(i+1))]}
+        data={embeddings[`data${i + 1}`]}
         setSpecData={setSpecData}
         cursorPosition={cursorPosition}
         setCursorPosition={setCursorPosition}
         color={"#e85252"}
-      />      
-    )
+      />
+    );
   }
-
 
   return (
     <div style={{ display: "flex" }}>
       {plots}
-      <MakeSpectrogram 
-        data={specData}
-      />
+      <MakeSpectrogram data={specData} />
     </div>
   );
 };
