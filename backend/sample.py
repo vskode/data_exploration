@@ -32,7 +32,7 @@ app.add_middleware(
 @app.post("/getDictionaries")
 async def get_folders(path: DataPath):
     jsons = [str(p.relative_to(global_path))
-             for p in global_path.joinpath(path.path).rglob('*json')][:3]
+             for p in global_path.joinpath(path.path).rglob('*json')]
     # print(jsons)
     return {'message': 'dictionaries successfully retrieved', 
             'dicts': jsons}
