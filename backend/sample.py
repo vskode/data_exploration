@@ -28,20 +28,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+#DOMRect {x: 65.62946319580078, y: 262.20831298828125, width: 8, height: 8, top: 262.20831298828125, …}
+        #   <rect
+        #     x={0}
+        #     y={0}
+        #     width={boundsWidth}
+        #     height={boundsHeight}
+        #     onMouseMove={onMouseMove}
+        #     onMouseLeave={() => setCursorPosition(null)}
+        #     visibility={"hidden"}
+        #     pointerEvents={"all"}
+        #     // onClick={(e) => handleClick(e, getClosestPoint(cursorPosition))}
+        #     onClick={handleClick}
+        #   />
 
 @app.post("/getDictionaries")
 async def get_folders(path: DataPath):
     jsons = [str(p.relative_to(global_path))
              for p in global_path.joinpath(path.path).rglob('*json')]
+    
     # print(jsons)
     return {'message': 'dictionaries successfully retrieved', 
             'dicts': jsons}
     
 
 @app.post("/getDataPoint")
-async def create_item(item: Item):
+async def create_spectrogram(item: Item):
     # print(item)
-    path = Path(Path(item.meta['audio_dir']).stem).joinpath(item.meta['audio_files'][item.index])
+    path = Path(item.meta['audio_dir']).joinpath(
+        item.meta['audio_files'][item.index]
+        )
+    # path = Path(Path(item.meta['audio_dir']).stem).joinpath(
+    #     item.meta['audio_files'][item.index]
+    #     )
     sr = item.meta['sample_rate (Hz)']
     segment_length = item.meta['segment_length (samples)'] / sr
     # if isinstance(item.label, float):

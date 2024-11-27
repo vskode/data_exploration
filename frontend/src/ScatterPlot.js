@@ -10,8 +10,8 @@ export const ScatterPlot = ({
   height,
   data,
   setSpecData,
-  cursorPosition,
-  setCursorPosition,
+  dataIndex,
+  setDataIndex,
   color,
 }) => {
   // bounds = area inside the graph axis = calculated by substracting the margins
@@ -73,31 +73,32 @@ export const ScatterPlot = ({
   }, [xScale, yScale, boundsHeight]);
 
   //
-  const getClosestPoint = (cursorPixelPositionX, cursorPixelPositionY) => {
-    const x = xScale.invert(cursorPixelPositionX);
-    const y = yScale.invert(cursorPixelPositionY);
-    const a = data.x.map(e => Math.pow(e - x, 2))
-    const b = data.y.map(e => Math.pow(e - y, 2))
-    const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
-    const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
-    const dists = a.map((e, i) => e+b[i])
-    const in_close = argMin(dists)
-    let minDistance = Infinity;
+  const getClosestPoint = (index) => {
+    // const x = xScale.invert(cursorPixelPositionX);
+    // const y = yScale.invert(cursorPixelPositionY);
+    // const a = data.x.map(e => Math.pow(e - x, 2))
+    // const b = data.y.map(e => Math.pow(e - y, 2))
+    // const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
+    // const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
+    // const dists = a.map((e, i) => e+b[i])
+    // const in_close = argMin(dists)
+    // let minDistance = Infinity;
     let closest = null;
     if (PairingVariable == null){
       closest = {
-        'x': data.x[in_close],
-        'y': data.y[in_close],
-        'z': data.timestamp[in_close],
+        'x': data.x[index],
+        'y': data.y[index],
+        'z': data.timestamp[index],
         'meta': data.metadata,
-        'index': in_close,
+        'index': index,
         // 'label': data.label[in_close]
       };
-      PairingVariable = closest['z']
+      PairingVariable = index
     }
     else {
-      let index = argMin(data.timestamp.map((e, i) => Math.abs(e-PairingVariable)))
-      PairingVariable = data.timestamp[index]
+      // let index = argMin(data.timestamp.map((e, i) => Math.abs(e-PairingVariable)))
+      // PairingVariable = data.timestamp[index]
+      PairingVariable = index
       closest = {
         'x': data.x[index],
         'y': data.y[index],
@@ -109,23 +110,28 @@ export const ScatterPlot = ({
     }
     return closest;
   };
-      
-  //
-  const onMouseMove = (e) => {
-  // const onMouseOver = (e) => {
-    PairingVariable = null;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const closest = getClosestPoint(mouseX, mouseY);
-
-    setCursorPosition([xScale(closest.x), yScale(closest.y)]);
-  };
 
   
+  const onMouseOverCircle = (e) => {
+    const circle = e.currentTarget;   
+    const index = parseInt(circle.getAttribute("data-index"), 10);
+
+    if (index !== dataIndex) {
+      // console.log("Circle hovered:", index);
+      setDataIndex(index); // Update only if necessary
+    }
+  };
+  
   const handleClick = (event) => {
-    const dataPoint = getClosestPoint(cursorPosition);
+    const index = dataIndex;
+    const dataPoint = {
+      'x': data.x[index],
+      'y': data.y[index],
+      'z': data.timestamp[index],
+      'meta': data.metadata,
+      'index': index,
+      'label': data.label[index]
+    };
     event.stopPropagation();  // Prevent event from being swallowed by other elements
     console.log("Circle clicked:", dataPoint);
     const url = "http://127.0.0.1:8000/";
@@ -143,65 +149,84 @@ export const ScatterPlot = ({
   const points = [];
   for (let i = 0; i <= data.x.length; i++){
     points.push(
-    <circle
-      key={i}
-      r={4} // radius
-      cx={xScale(data.x[i])} // position on the X axis
-      cy={yScale(data.y[i])} // on the Y axis
-      opacity={1}
-      // stroke={toColor(data.timestamp[i])}
-      stroke={toColor(data.label[i])}
-      fill="#ABABAB"
-      fillOpacity={0.2}
-      strokeWidth={1}
-      // onMouseOver={Cursor(xScale(data.x[i]), xScale(data.y[i]), color)}
-      // onMouseOver={onMouseOver}
-      // onMouseOver={Cursor(i, color)}
-    />         
-    )
-  }
-
+      <circle
+          key={i}
+          data-index={i}  // Use `i` directly
+          r={4} // radius
+          cx={xScale(data.x[i])} // position on the X axis
+          cy={yScale(data.y[i])} // on the Y axis
+          opacity={1}
+          stroke={toColor(data.label[i])}
+          fill="#ABABAB"
+          fillOpacity={0.2}
+          strokeWidth={1}
+          pointerEvents="all" // Ensure the element can be clicked
+          onMouseEnter={onMouseOverCircle}
+          />
+        );
+      }
+      
+  const Cursor = ({ x, y, color, index }) => {
+  
+    const width =  50;
+    const height = 50;
+    // console.log("Cursor:", x, y, color, index);
+    return (
+      <>
+        <circle 
+          cx={x} 
+          cy={y} 
+          r={5} 
+          fill={color}
+          onClick={(e) => handleClick(e)}
+        />
+        <rect 
+          x={x-width} 
+          y={y-height} 
+          width={width} 
+          height={height} 
+          fill="#AAAAAA"
+          visibility={'visible'}></rect>
+        <text 
+          x={x-width+2} 
+          y={y-height+12} 
+          fontFamily="Verdana" 
+          fontSize="12" 
+          fill="white">{index}</text>
+      </>
+    );
+  };
 
   function toColor(num) {
     let col = 0
-    // if (num instanceof String) {
     col = tScale(col_dict[num]);
-    // } else {
-    //   col = tScale(num);
-    // }
-    const c = d3['interpolateViridis'](col);
+    let c = 0;
+    if (num == 'X') {
+      c = '#123123'
+    } else if (num == 'B') {
+      c = '#998822'
+    }
     return c;
 }
 
   return (
     <div>
-      <svg width={width} height={height}>
+      <svg width={width} height={height} style={{ pointerEvents: "all" }}>
         <g
           width={boundsWidth}
           height={boundsHeight}
           transform={`translate(${[MARGIN.left, MARGIN.top].join(",")})`}
         >
           {points}
-          {cursorPosition && (
+          {dataIndex && (
             <Cursor
               height={boundsHeight}
-              x={xScale(getClosestPoint(cursorPosition)?.x)}
-              y={yScale(getClosestPoint(cursorPosition)?.y)}
-              color={toColor(getClosestPoint(cursorPosition)?.z)}
+              x={xScale(data.x[dataIndex])}
+              y={yScale(data.y[dataIndex])}
+              color={toColor(data.label[dataIndex])}
+              index={dataIndex}
             />
           )}
-          <rect
-            x={0}
-            y={0}
-            width={boundsWidth}
-            height={boundsHeight}
-            onMouseMove={onMouseMove}
-            onMouseLeave={() => setCursorPosition(null)}
-            visibility={"hidden"}
-            pointerEvents={"all"}
-            // onClick={(e) => handleClick(e, getClosestPoint(cursorPosition))}
-            onClick={handleClick}
-          />
         </g>
         <g
           width={boundsWidth}
@@ -213,33 +238,3 @@ export const ScatterPlot = ({
     </div>
   );
 }
-
-const Cursor = ({ x, y, color }) => {
-
-  const width =  50;
-  const height = 50;
-
-  return (
-    <>
-      <circle 
-        cx={x} 
-        cy={y} 
-        r={5} 
-        fill={color}
-      />
-      <rect 
-        x={x-width} 
-        y={y-height} 
-        width={width} 
-        height={height} 
-        fill="#AAAAAA"
-        visibility={'visible'}></rect>
-      <text 
-        x={x-width+2} 
-        y={y-height+12} 
-        fontFamily="Verdana" 
-        fontSize="12" 
-        fill="white">{PairingVariable}</text>
-    </>
-  );
-};

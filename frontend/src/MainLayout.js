@@ -1,22 +1,22 @@
 import { useState, useEffect } from "react";
 import { ScatterPlot } from "./ScatterPlot";
 import { MakeSpectrogram } from "./Spectrogram";
-import Dropdown from "react-bootstrap/Dropdown";
-import Form from "react-bootstrap/Form";
 import Container from "react-bootstrap/Container";
 import axios from "axios";
 import { CheckboxDropdown } from "./CheckboxDropdown";
 
 export const MainLayout = ({ width = 700, height = 400 }) => {
   const [specData, setSpecData] = useState();
-  const [cursorPosition, setCursorPosition] = useState();
+  const [dataIndex, setDataIndex] = useState();
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([
-        { id: "em", label: "Exact Mass", checked: true },
-      ]);
-  const path = { "path": "files/embeddings/umap_nn15/" };
-
+    { id: "em", label: "Exact Mass", checked: true },
+  ]);
+  const path = { "path": "files/embeddings/CallType_umap/" };
+  const repeatByCounts = (arr, counts) => 
+    arr.flatMap((item, index) => Array(counts[index]).fill(item));
+  
   // Fetch dictionaries from the backend
   const getDictionaries = async () => {
     let dicts = [];
@@ -47,6 +47,21 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
               'data': response.data,
               'name': dicts[i].split("___")[1].split('/')[0]
             };
+            response_dict[`embeddings${i + 1}`]['data']['index'] = Array.from(
+              {length: response_dict[`embeddings${i + 1}`]['data'].label.length}, 
+              (_, n) => n
+            );  
+            
+            const repeat_array = response_dict[`embeddings${i + 1}`]['data']
+                              .metadata['embedding_dimensions']
+                              .map((i) => i[0]);
+            const label_array = response_dict[`embeddings${i + 1}`]['data'].label;
+            // Example:
+            const new_labels = repeatByCounts(label_array, repeat_array);
+            
+            response_dict[`embeddings${i + 1}`]['data'].label = new_labels;
+            
+
           }
           setEmbeddings(response_dict);
           // Directly set new items from response_dict
@@ -83,8 +98,8 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
         height={height}
         data={embeddings[`embeddings${i + 1}`]['data']}
         setSpecData={setSpecData}
-        cursorPosition={cursorPosition}
-        setCursorPosition={setCursorPosition}
+        dataIndex={dataIndex}
+        setDataIndex={setDataIndex}
         color={"#e85252"}
       />
     );
