@@ -6,15 +6,18 @@ const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
 var PairingVariable = null;
 
 export const ScatterPlot = ({
+  plotId,
   width,
   height,
   data,
   setSpecData,
-  dataIndex,
-  setDataIndex,
+  globalTimestamp,
+  setGlobalTimestamp,
+  hoveredPlotId,
+  setHoveredPlotId,
   color,
 }) => {
-  // bounds = area inside the graph axis = calculated by substracting the margins
+  const dataIndex = useRef(null);
   const axesRef = useRef(null);
   const boundsWidth = width - MARGIN.right - MARGIN.left;
   const boundsHeight = height - MARGIN.top - MARGIN.bottom;
@@ -72,55 +75,39 @@ export const ScatterPlot = ({
     svgElement.append("g").call(yAxisGenerator);
   }, [xScale, yScale, boundsHeight]);
 
-  //
-  const getClosestPoint = (index) => {
-    // const x = xScale.invert(cursorPixelPositionX);
-    // const y = yScale.invert(cursorPixelPositionY);
-    // const a = data.x.map(e => Math.pow(e - x, 2))
-    // const b = data.y.map(e => Math.pow(e - y, 2))
-    // const argFact = (compareFn) => (array) => array.map((el, idx) => [el, idx]).reduce(compareFn)[1]
-    // const argMin = argFact((max, el) => (el[0] < max[0] ? el : max))
-    // const dists = a.map((e, i) => e+b[i])
-    // const in_close = argMin(dists)
-    // let minDistance = Infinity;
-    let closest = null;
-    if (PairingVariable == null){
-      closest = {
-        'x': data.x[index],
-        'y': data.y[index],
-        'z': data.timestamp[index],
-        'meta': data.metadata,
-        'index': index,
-        // 'label': data.label[in_close]
-      };
-      PairingVariable = index
-    }
-    else {
-      // let index = argMin(data.timestamp.map((e, i) => Math.abs(e-PairingVariable)))
-      // PairingVariable = data.timestamp[index]
-      PairingVariable = index
-      closest = {
-        'x': data.x[index],
-        'y': data.y[index],
-        'z': data.timestamp[index],
-        'meta': data.metadata,
-        'index': index,
-        // 'label': data.label[in_close]
-      };
-    }
-    return closest;
-  };
 
-  
-  const onMouseOverCircle = (e) => {
+  const onMouseOverCircle = (e, plotId) => {
     const circle = e.currentTarget;   
-    const index = parseInt(circle.getAttribute("data-index"), 10);
+    const hoveredIndex = parseInt(circle.getAttribute("data-index"), 10);
+    const hoveredTimestamp = data.timestamps[hoveredIndex];
 
-    if (index !== dataIndex) {
-      // console.log("Circle hovered:", index);
-      setDataIndex(index); // Update only if necessary
-    }
-  };
+    setHoveredPlotId(plotId);  // Track which plot is actively hovered
+    setGlobalTimestamp(hoveredTimestamp); // Sync timestamp for other plots
+    dataIndex.current = hoveredIndex; // Set index only for hovered plot
+};
+const onMouseLeavePlot = () => {
+  setHoveredPlotId(null); // Allow normal syncing again
+};
+
+
+useEffect(() => {
+  if (globalTimestamp === null) return;
+  
+  // Ensure plotId is properly passed and avoid updating hovered plot
+  if (plotId !== undefined && plotId === hoveredPlotId) return;
+  
+  // Find the closest timestamp in this plot's data
+  const closestIndex = data.timestamps.reduce((bestIdx, ts, idx) => 
+    Math.abs(ts - globalTimestamp) < Math.abs(data.timestamps[bestIdx] - globalTimestamp) ? idx : bestIdx, 
+  0
+);
+
+  dataIndex.current = closestIndex; // update dataIndex of current plot
+}, [globalTimestamp]); // Only update when globalTimestamp changes
+
+
+
+
   
   const handleClick = (event) => {
     const index = dataIndex;
@@ -146,10 +133,11 @@ export const ScatterPlot = ({
     })
   };
 
-  const points = [];
-  for (let i = 0; i <= data.x.length; i++){
-    points.push(
-      <circle
+  const points = useMemo(() => {
+    const pts = [];
+    for (let i = 0; i <= data.x.length; i++) {
+      pts.push(
+        <circle
           key={i}
           data-index={i}  // Use `i` directly
           r={4} // radius
@@ -161,10 +149,12 @@ export const ScatterPlot = ({
           fillOpacity={0.2}
           strokeWidth={1}
           pointerEvents="all" // Ensure the element can be clicked
-          onMouseEnter={onMouseOverCircle}
-          />
-        );
-      }
+          onMouseEnter={(e) => onMouseOverCircle(e, plotId)}
+        />
+      );
+    }
+    return pts;
+  }, [data, xScale, yScale]);
       
   const Cursor = ({ x, y, color, index }) => {
   
@@ -201,9 +191,9 @@ export const ScatterPlot = ({
     let col = 0
     col = tScale(col_dict[num]);
     let c = 0;
-    if (num == 'X') {
+    if (num == 'Apus_apus') {
       c = '#123123'
-    } else if (num == 'B') {
+    } else if (num == 'Turdus_merula') {
       c = '#998822'
     }
     return c;
@@ -211,20 +201,26 @@ export const ScatterPlot = ({
 
   return (
     <div>
-      <svg width={width} height={height} style={{ pointerEvents: "all" }}>
+      <svg 
+        width={width} 
+        height={height} 
+        style={{ pointerEvents: "all" }}
+        onMouseLeave={onMouseLeavePlot}
+      >
+
         <g
           width={boundsWidth}
           height={boundsHeight}
           transform={`translate(${[MARGIN.left, MARGIN.top].join(",")})`}
         >
           {points}
-          {dataIndex && (
+          {dataIndex.current && (
             <Cursor
               height={boundsHeight}
-              x={xScale(data.x[dataIndex])}
-              y={yScale(data.y[dataIndex])}
-              color={toColor(data.label[dataIndex])}
-              index={dataIndex}
+              x={xScale(data.x[dataIndex.current])}
+              y={yScale(data.y[dataIndex.current])}
+              color={toColor(data.label[dataIndex.current])}
+              index={dataIndex.current}
             />
           )}
         </g>

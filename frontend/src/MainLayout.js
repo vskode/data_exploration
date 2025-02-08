@@ -7,13 +7,16 @@ import { CheckboxDropdown } from "./CheckboxDropdown";
 
 export const MainLayout = ({ width = 700, height = 400 }) => {
   const [specData, setSpecData] = useState();
-  const [dataIndex, setDataIndex] = useState();
+  const [hoveredPlotId, setHoveredPlotId] = useState(null);
+  const [globalTimestamp, setGlobalTimestamp] = useState(null);
+  
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([
     { id: "em", label: "Exact Mass", checked: true },
   ]);
-  const path = { "path": "files/embeddings/CallType_umap/" };
+  // const path = { "path": "files/embeddings/CallType_umap/" };
+  const path = { "path": "files/embeddings/xc_umap/" };
   const repeatByCounts = (arr, counts) => 
     arr.flatMap((item, index) => Array(counts[index]).fill(item));
   
@@ -51,10 +54,30 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
               {length: response_dict[`embeddings${i + 1}`]['data'].label.length}, 
               (_, n) => n
             );  
-            
             const repeat_array = response_dict[`embeddings${i + 1}`]['data']
-                              .metadata['embedding_dimensions']
-                              .map((i) => i[0]);
+                                .metadata['embedding_dimensions']
+                                .map((i) => i[0]);
+
+            
+            let lengths = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`file_lengths (s)`];
+            let dims = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`embedding_dimensions`];
+            let timestamps = [];
+            let last_timestamp = 0;
+            
+
+            for (let dim = 0; dim < lengths.length; dim++) {
+                let step = lengths[dim] / dims[dim][0]; // Step size based on embedding dimension
+                let current = 0;
+            
+                while (current <= lengths[dim]) {
+                    timestamps.push(current + last_timestamp);
+                    current += step;
+                }
+                last_timestamp = lengths[dim];
+            }
+            response_dict[`embeddings${i + 1}`]['data']['timestamps'] = timestamps;
+            console.log(timestamps);
+            
             const label_array = response_dict[`embeddings${i + 1}`]['data'].label;
             // Example:
             const new_labels = repeatByCounts(label_array, repeat_array);
@@ -93,13 +116,15 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
     }
     plots.push(
       <ScatterPlot
-        key={i}
+        plotId={i}
         width={width / 2}
         height={height}
         data={embeddings[`embeddings${i + 1}`]['data']}
         setSpecData={setSpecData}
-        dataIndex={dataIndex}
-        setDataIndex={setDataIndex}
+        globalTimestamp={globalTimestamp}
+        setGlobalTimestamp={setGlobalTimestamp}
+        hoveredPlotId={hoveredPlotId}
+        setHoveredPlotId={setHoveredPlotId}
         color={"#e85252"}
       />
     );
