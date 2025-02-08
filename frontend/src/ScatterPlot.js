@@ -104,17 +104,14 @@ useEffect(() => {
 
   dataIndex.current = closestIndex; // update dataIndex of current plot
 }, [globalTimestamp]); // Only update when globalTimestamp changes
-
-
-
-
   
   const handleClick = (event) => {
-    const index = dataIndex;
+    const index = dataIndex.current;
     const dataPoint = {
       'x': data.x[index],
       'y': data.y[index],
-      'z': data.timestamp[index],
+      'z': data.time_within_file[index],
+      'source_file': data.audio_filenames[index],
       'meta': data.metadata,
       'index': index,
       'label': data.label[index]

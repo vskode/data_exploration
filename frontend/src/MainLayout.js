@@ -20,6 +20,37 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const repeatByCounts = (arr, counts) => 
     arr.flatMap((item, index) => Array(counts[index]).fill(item));
   
+  const enrichDict = (response_dict, i) => {
+    let lengths = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`file_lengths (s)`];
+    let dims = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`embedding_dimensions`];
+    let audiofiles = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`audio_files`];
+    
+    let timestamps = [];
+    let time_within_file = [];
+    let audio_filenames = [];
+    let last_timestamp = 0;
+    
+
+    for (let dim = 0; dim < lengths.length; dim++) {
+        let step = lengths[dim] / dims[dim][0]; // Step size based on embedding dimension
+        let current = 0;
+    
+        while (current <= lengths[dim]) {
+            timestamps.push(current + last_timestamp);
+            audio_filenames.push(audiofiles[dim]);
+            time_within_file.push(current);
+            current += step;
+        }
+        last_timestamp = lengths[dim];
+    }
+    response_dict[`embeddings${i + 1}`]['data']['timestamps'] = timestamps;
+    response_dict[`embeddings${i + 1}`]['data']['time_within_file'] = time_within_file;
+    response_dict[`embeddings${i + 1}`]['data']['audio_filenames'] = audio_filenames;
+
+    return response_dict;
+  }
+
+
   // Fetch dictionaries from the backend
   const getDictionaries = async () => {
     let dicts = [];
@@ -41,7 +72,7 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
     const fetchEmbeddings = async () => {
       let dicts = [];
         try {
-          const response_dict = {};
+          let response_dict = {};
           dicts = await getDictionaries();
           for (let i = 0; i < dicts.length; i++) {
             console.log("Fetching file from:", dicts[i]); // Log file path being requested
@@ -58,25 +89,9 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
                                 .metadata['embedding_dimensions']
                                 .map((i) => i[0]);
 
-            
-            let lengths = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`file_lengths (s)`];
-            let dims = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`embedding_dimensions`];
-            let timestamps = [];
-            let last_timestamp = 0;
-            
+            response_dict = enrichDict(response_dict, i);
 
-            for (let dim = 0; dim < lengths.length; dim++) {
-                let step = lengths[dim] / dims[dim][0]; // Step size based on embedding dimension
-                let current = 0;
-            
-                while (current <= lengths[dim]) {
-                    timestamps.push(current + last_timestamp);
-                    current += step;
-                }
-                last_timestamp = lengths[dim];
-            }
-            response_dict[`embeddings${i + 1}`]['data']['timestamps'] = timestamps;
-            console.log(timestamps);
+            // console.log(timestamps);
             
             const label_array = response_dict[`embeddings${i + 1}`]['data'].label;
             // Example:
