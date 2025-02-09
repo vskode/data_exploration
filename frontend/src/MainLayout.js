@@ -3,6 +3,7 @@ import { ScatterPlot } from "./ScatterPlot";
 import { MakeSpectrogram } from "./Spectrogram";
 import Container from "react-bootstrap/Container";
 import axios from "axios";
+import * as d3 from "d3";
 import { CheckboxDropdown } from "./CheckboxDropdown";
 
 export const MainLayout = ({ width = 700, height = 400 }) => {
@@ -13,17 +14,15 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
   const [embeddings, setEmbeddings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([
-    { id: "em", label: "Exact Mass", checked: true },
+    { id: "model_name", label: "model-dataset-dimreduction", checked: true },
   ]);
   // const path = { "path": "files/embeddings/CallType_umap/" };
-  const path = { "path": "files/embeddings/xc_umap/" };
-  const repeatByCounts = (arr, counts) => 
-    arr.flatMap((item, index) => Array(counts[index]).fill(item));
-  
-  const enrichDict = (response_dict, i) => {
-    let lengths = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`file_lengths (s)`];
-    let dims = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`embedding_dimensions`];
-    let audiofiles = response_dict[`embeddings${i + 1}`][`data`][`metadata`][`audio_files`];
+  const path = { "path": "files/embeddings/dcase/dcase/" };
+
+  const enrichDict = (dict) => {
+    let lengths = dict[`metadata`][`file_lengths (s)`];
+    let dims = dict[`metadata`][`embedding_dimensions`];
+    let audiofiles = dict[`metadata`][`audio_files`];
     
     let timestamps = [];
     let time_within_file = [];
@@ -41,13 +40,13 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
             time_within_file.push(current);
             current += step;
         }
-        last_timestamp = lengths[dim];
+        last_timestamp += lengths[dim];
     }
-    response_dict[`embeddings${i + 1}`]['data']['timestamps'] = timestamps;
-    response_dict[`embeddings${i + 1}`]['data']['time_within_file'] = time_within_file;
-    response_dict[`embeddings${i + 1}`]['data']['audio_filenames'] = audio_filenames;
+    dict['timestamps'] = timestamps;
+    dict['time_within_file'] = time_within_file;
+    dict['audio_filenames'] = audio_filenames;
 
-    return response_dict;
+    return dict;
   }
 
 
@@ -59,7 +58,7 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
       const response = await axios.post(url, path);
       console.log("Dictionaries received:", response.data.dicts); // Log response
       dicts = response.data.dicts; // Update dictionaries state
-      // setDictionariesLoaded(true); // Set the dictionaries as loaded
+      
       return dicts;
     } catch (error) {
       console.error("Error fetching dictionaries:", error);
@@ -73,40 +72,36 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
       let dicts = [];
         try {
           let response_dict = {};
+          let model_array = [];
           dicts = await getDictionaries();
+          const labels = await axios.get('files/embeddings/dcase/labels.json')
           for (let i = 0; i < dicts.length; i++) {
             console.log("Fetching file from:", dicts[i]); // Log file path being requested
-            const response = await axios.get(dicts[i]);
-            response_dict[`embeddings${i + 1}`] = {
-              'data': response.data,
-              'name': dicts[i].split("___")[1].split('/')[0]
+            const embedding = await axios.get(dicts[i]);
+            let model_name = embedding.data.metadata.model_name;
+            model_array.push(model_name);
+
+            response_dict[model_name] = {
+              'data': embedding.data,
+              'name': dicts[i].split("___")[1].split('/')[0],
+              'model_name': model_name
             };
-            response_dict[`embeddings${i + 1}`]['data']['index'] = Array.from(
-              {length: response_dict[`embeddings${i + 1}`]['data'].label.length}, 
+            response_dict[model_name]['data']['index'] = Array.from(
+              {length: response_dict[model_name]['data'].x.length}, 
               (_, n) => n
             );  
-            const repeat_array = response_dict[`embeddings${i + 1}`]['data']
-                                .metadata['embedding_dimensions']
-                                .map((i) => i[0]);
+            response_dict[model_name].data = enrichDict(response_dict[model_name].data);
 
-            response_dict = enrichDict(response_dict, i);
-
-            // console.log(timestamps);
-            
-            const label_array = response_dict[`embeddings${i + 1}`]['data'].label;
-            // Example:
-            const new_labels = repeatByCounts(label_array, repeat_array);
-            
-            response_dict[`embeddings${i + 1}`]['data'].label = new_labels;
+            response_dict[model_name]['data'].labels = labels.data[model_name];
             
 
           }
           setEmbeddings(response_dict);
           // Directly set new items from response_dict
           const newItems = Object.values(response_dict).map((item) => ({
-            id: item.name, // Use `name` as ID
+            id: item.model_name, // Use `name` as ID
             label: item.name, // Use `name` as label
-            checked: false, // Default to unchecked
+            checked: ['birdnet', 'insect66'].includes(item.model_name) ? true : false // Default to checked if 'birdnet'
           }));
           setItems(newItems);
           console.log("Embeddings received:", response_dict); // Log response
@@ -120,12 +115,17 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
     fetchEmbeddings();
   }, []); // This effect runs when `dictionariesLoaded` or `dictionaries` change
 
-  if (loading) {
+  if (loading) {  
     return <div>Loading...</div>;
   }  
 
+  console.log("Global timestamp:", globalTimestamp);
+  const uniqueLabels = [...new Set(embeddings['birdnet'].data.labels.ground_truth)];  // Extract unique labels
+  const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(uniqueLabels);
+
   const plots = [];
   for (let i = 0; i < Object.keys(items).length; i++) {
+    const model_name = items[i].id;
     if (!items[i].checked) {
       continue;
     }
@@ -134,13 +134,13 @@ export const MainLayout = ({ width = 700, height = 400 }) => {
         plotId={i}
         width={width / 2}
         height={height}
-        data={embeddings[`embeddings${i + 1}`]['data']}
+        data={embeddings[model_name]['data']}
+        colorScale={colorScale}
         setSpecData={setSpecData}
         globalTimestamp={globalTimestamp}
         setGlobalTimestamp={setGlobalTimestamp}
         hoveredPlotId={hoveredPlotId}
         setHoveredPlotId={setHoveredPlotId}
-        color={"#e85252"}
       />
     );
   }

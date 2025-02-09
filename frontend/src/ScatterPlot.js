@@ -3,19 +3,18 @@ import axios from "axios";
 import * as d3 from "d3";
 
 const MARGIN = { top: 30, right: 30, bottom: 50, left: 50 };
-var PairingVariable = null;
 
 export const ScatterPlot = ({
   plotId,
   width,
   height,
   data,
+  colorScale,
   setSpecData,
   globalTimestamp,
   setGlobalTimestamp,
   hoveredPlotId,
-  setHoveredPlotId,
-  color,
+  setHoveredPlotId
 }) => {
   const dataIndex = useRef(null);
   const axesRef = useRef(null);
@@ -38,28 +37,12 @@ export const ScatterPlot = ({
       .domain([xMin, xMax || 0])
       .range([0, boundsWidth]);
   }, [data, width]);
-  
-  // t axis
-  const [tMin, tMax] = d3.extent(data.timestamp);
-  const tScale = useMemo(() => {
-    return d3
-      .scaleLinear()
-      .domain([tMin, tMax || 0]);
-  }, [data, width]);
 
-  function onlyUnique(value, index, array) {
-    return array.indexOf(value) === index;
+  // Function to get color for a label
+  function toColor(label) {
+    return colorScale(label);
   }
-  const labels = data.label.filter(onlyUnique).sort();
-  const length = labels.length;
-  const colors = Array.from({length: length}, (_, n) => n*(tMax/(length-1)))
-  const col_dict = {}
-  for (let i = 0; i < length; i++) {
-    col_dict[labels[i]] = colors[i]
-  }
-  if (data.label === undefined) {
-    data.label = Array.from({length: data.x.length}, (_, n) => n);
-  }
+  
 
   // Render the X and Y axis using d3.js, not react
   useEffect(() => {
@@ -84,6 +67,7 @@ export const ScatterPlot = ({
     setHoveredPlotId(plotId);  // Track which plot is actively hovered
     setGlobalTimestamp(hoveredTimestamp); // Sync timestamp for other plots
     dataIndex.current = hoveredIndex; // Set index only for hovered plot
+    console.log("Hovered index:", hoveredIndex);
 };
 const onMouseLeavePlot = () => {
   setHoveredPlotId(null); // Allow normal syncing again
@@ -103,10 +87,11 @@ useEffect(() => {
 );
 
   dataIndex.current = closestIndex; // update dataIndex of current plot
+  console.log("Closest index:", closestIndex);
 }, [globalTimestamp]); // Only update when globalTimestamp changes
   
-  const handleClick = (event) => {
-    const index = dataIndex.current;
+  const handleClick = (event, index) => {
+    console.log("Clicked on circle:", index);
     const dataPoint = {
       'x': data.x[index],
       'y': data.y[index],
@@ -137,12 +122,12 @@ useEffect(() => {
         <circle
           key={i}
           data-index={i}  // Use `i` directly
-          r={4} // radius
+          r={2} // radius
           cx={xScale(data.x[i])} // position on the X axis
           cy={yScale(data.y[i])} // on the Y axis
           opacity={1}
-          stroke={toColor(data.label[i])}
-          fill="#ABABAB"
+          stroke={toColor(data.labels.ground_truth[i])} // Apply correct color
+          fill={toColor(data.labels.ground_truth[i])}  // Fill with the same color
           fillOpacity={0.2}
           strokeWidth={1}
           pointerEvents="all" // Ensure the element can be clicked
@@ -150,10 +135,20 @@ useEffect(() => {
         />
       );
     }
+    // console.log("current point:", dataIndex.current);
     return pts;
   }, [data, xScale, yScale]);
       
-  const Cursor = ({ x, y, color, index }) => {
+  // const Cursor = ({ x, y, color, index }) => {
+  const Cursor = ({ index, data }) => {
+    const x = xScale(data.x[index]);
+    const y = yScale(data.y[index]);
+    const color = toColor(data.label[index]);
+
+    const time_within_file = data.time_within_file[index];
+    const source_file = data.audio_filenames[index];
+    const time_accum = data.timestamps[index];
+
   
     const width =  50;
     const height = 50;
@@ -163,38 +158,45 @@ useEffect(() => {
         <circle 
           cx={x} 
           cy={y} 
-          r={5} 
-          fill={color}
-          onClick={(e) => handleClick(e)}
+          r={3} 
+          // fill={color}
+          fill="black"
+          onClick={(e) => handleClick(e, index)}
         />
-        <rect 
+        {/* <rect 
           x={x-width} 
           y={y-height} 
           width={width} 
           height={height} 
           fill="#AAAAAA"
-          visibility={'visible'}></rect>
-        <text 
+          visibility={'visible'}></rect> */}
+        {/* <text 
           x={x-width+2} 
           y={y-height+12} 
           fontFamily="Verdana" 
           fontSize="12" 
-          fill="white">{index}</text>
+          fill="white">{index}</text> */}
+          <text 
+            // x={width - 30} 
+            y={height + 270} 
+            fontFamily="Verdana" 
+            fontSize="12" 
+            fill="black"
+          >
+            <tspan x={width - 20} dy="1.2em">
+              Time within file: {time_within_file.toFixed(2)}
+            </tspan>
+            <tspan x={width - 20} dy="1.2em">
+              Source file: {source_file}
+            </tspan>
+            <tspan x={width - 20} dy="1.2em">
+              Time accum: {time_accum.toFixed(2)}
+            </tspan>
+          </text>
+
       </>
     );
   };
-
-  function toColor(num) {
-    let col = 0
-    col = tScale(col_dict[num]);
-    let c = 0;
-    if (num == 'Apus_apus') {
-      c = '#123123'
-    } else if (num == 'Turdus_merula') {
-      c = '#998822'
-    }
-    return c;
-}
 
   return (
     <div>
@@ -213,11 +215,8 @@ useEffect(() => {
           {points}
           {dataIndex.current && (
             <Cursor
-              height={boundsHeight}
-              x={xScale(data.x[dataIndex.current])}
-              y={yScale(data.y[dataIndex.current])}
-              color={toColor(data.label[dataIndex.current])}
               index={dataIndex.current}
+              data={data}
             />
           )}
         </g>
